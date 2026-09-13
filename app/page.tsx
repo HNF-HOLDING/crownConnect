@@ -1,63 +1,28 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { getChatGPTUser } from './chatgpt-auth';
-import { findAccountProfile, listSellerCities, listSellers } from '@/db/queries';
+import { getChatGPTUser, chatGPTSignInPath } from './chatgpt-auth';
+import { findAccountProfile } from '@/db/queries';
 import { AccountMenu } from './account-menu';
 
 export const dynamic = 'force-dynamic';
 
-const samples = [
-  { title: 'Knotless braids', business: 'Diplomatic Hair Salon', city: 'KaMaporo', price: 350, position: '76% 40%' },
-  { title: 'Tribal goddess braids', business: 'Diplomatic Hair Salon', city: 'KaMaporo', price: 400, position: '10% 68%' },
-  { title: 'Goddess braids', business: 'Diplomatic Hair Salon', city: 'KaMaporo', price: 480, position: '49% 68%' },
-  { title: 'Short boho braids', business: 'Diplomatic Hair Salon', city: 'KaMaporo', price: 350, position: '90% 68%' },
-];
-
-export default async function Home({ searchParams }: { searchParams: Promise<{ q?: string; city?: string; specialty?: string; maxPrice?: string }> }) {
-  const params = await searchParams;
-  const q = params.q?.trim().slice(0, 80) ?? '', city = params.city?.trim().slice(0, 80) ?? '', specialty = params.specialty?.trim().slice(0, 40) ?? '', maxPrice = Number(params.maxPrice) || undefined;
+export default async function Home() {
   const user = await getChatGPTUser();
-  const [account, sellers, cities] = await Promise.all([user ? findAccountProfile(user.userId) : Promise.resolve(null), listSellers({ q, city, specialty, maxPrice }), listSellerCities()]);
-  return (
-    <>
-      <header className="site-header">
-        <a className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</a>
-        <nav aria-label="Primary navigation"><a href="#stylists">Find a stylist</a><Link href="/account">{account?.primary_role === 'seller' ? 'Seller Studio' : 'Customer Space'}</Link></nav>
-        {user ? <AccountMenu role={account?.primary_role} /> : <Link className="button secondary" href="/welcome">Choose your space ↗</Link>}
-      </header>
-      <main>
-        <section className="hero">
-          <div><p className="eyebrow">YOUR HAIR. YOUR PEOPLE.</p><h1>Your next good<br />hair day starts here.</h1><p>Discover independent stylists and request an appointment directly.</p></div>
-          <div className="hero-note"><span>Made for your crown.</span><p>Local talent.<br />Real booking requests.</p></div>
-        </section>
-        <section id="stylists" className="marketplace" aria-labelledby="market-heading">
-          <div className="section-heading"><div><p className="eyebrow">BOOK LOCAL TALENT</p><h2 id="market-heading">A stylist for your style</h2></div><span>{sellers.length ? `${sellers.length} matching ${sellers.length === 1 ? 'stylist' : 'stylists'}` : 'Refine your search'}</span></div>
-          <form className="market-filters" action="/" method="get" aria-label="Find a stylist">
-            <label className="filter-search"><span>Search</span><input name="q" defaultValue={q} placeholder="Service or business" /></label>
-            <label><span>Location</span><select name="city" defaultValue={city}><option value="">All locations</option>{cities.map((place) => <option key={place}>{place}</option>)}</select></label>
-            <label><span>Specialty</span><select name="specialty" defaultValue={specialty}><option value="">All specialties</option><option>Braids</option><option>Wigs</option><option>Weaves</option><option>Natural hair</option><option>Haircare</option></select></label>
-            <label><span>Budget</span><select name="maxPrice" defaultValue={maxPrice ? String(maxPrice) : ''}><option value="">Any price</option><option value="300">Up to R300</option><option value="500">Up to R500</option><option value="800">Up to R800</option><option value="1200">Up to R1,200</option></select></label>
-            <button className="button small" type="submit">Search</button>{(q || city || specialty || maxPrice) && <Link className="clear-link" href="/#stylists">Clear</Link>}
-          </form>
-          <div className="grid">
-            {sellers.map((seller) => (
-              <article className="card live-card" key={seller.id}>
-                <div className="service-art"><span>{seller.specialty}</span><strong>{seller.business_name.slice(0, 1)}</strong></div>
-                <p className="badge">{seller.specialty}</p><h3>{seller.featured_service}</h3><p>{seller.business_name}</p><p>⌖ {seller.city}</p><p className="card-bio">{seller.bio}</p>
-                <div className="card-footer"><strong>From R{seller.service_price.toLocaleString('en-ZA')}</strong><Link href={`/book/${seller.id}`}>View & request ↗</Link></div>
-              </article>
-            ))}
-            {!sellers.length && !q && !city && !specialty && !maxPrice && samples.map((service) => (
-              <article className="card" key={service.title}>
-                <div className="photo"><Image src="/salon.jpeg" alt="Hairstyles from the Diplomatic Hair Salon reference flyer" fill sizes="(max-width: 700px) 50vw, 25vw" style={{ objectFit: 'cover', objectPosition: service.position }} /><span className="badge">Sample</span></div>
-                <h3>{service.title}</h3><p>{service.business}</p><p>⌖ {service.city}</p>
-                <div className="card-footer"><strong>R{service.price}</strong><span className="muted">Profile not live yet</span></div>
-              </article>
-            ))}{!sellers.length && (q || city || specialty || maxPrice) && <div className="empty filter-empty">No stylists match those filters yet. Try widening your search.</div>}
-          </div>
-        </section>
-      </main>
-      <footer><a className="brand" href="/">♛ CrownConnect</a><p>Hair, care & community.</p><span>South Africa · ZAR</span></footer>
-    </>
-  );
+  const account = user ? await findAccountProfile(user.userId) : null;
+  const accountHref = account ? '/account' : '/welcome';
+  return <>
+    <header className="site-header landing-header">
+      <a className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</a>
+      <nav aria-label="Primary navigation"><Link href="/marketplace">Explore stylists</Link><a href="#how-it-works">How it works</a></nav>
+      {user ? <AccountMenu role={account?.primary_role} /> : <div className="landing-auth"><a className="sign-in-link" href={chatGPTSignInPath('/welcome')}>Sign in</a><a className="button small" href={chatGPTSignInPath('/welcome')}>Create account</a></div>}
+    </header>
+    <main className="landing-page">
+      <section className="landing-hero">
+        <div><p className="eyebrow">SOUTH AFRICA’S HAIR MARKETPLACE</p><h1>Everything for your crown, in one place.</h1><p className="landing-lead">Discover talented local stylists, book your next appointment, and explore the hair looks you love.</p><div className="hero-actions"><Link className="button" href={accountHref}>Find a stylist</Link><Link className="button ghost" href="/marketplace">Browse the marketplace</Link></div><p className="trust-copy">Free to explore. Create an account when you’re ready to book or list your services.</p></div>
+        <div className="landing-art" aria-label="CrownConnect beauty marketplace"><div className="art-pill">BRAIDS · WIGS · WEAVES</div><strong>♛</strong><p>YOUR NEXT<br />HAIR DAY</p><span>LOCAL TALENT</span></div>
+      </section>
+      <section id="how-it-works" className="landing-steps" aria-labelledby="steps-heading"><div><p className="eyebrow">HOW IT WORKS</p><h2 id="steps-heading">From inspiration to appointment.</h2></div><div className="step-grid"><article><span>01</span><h3>Explore</h3><p>Browse local stylists and the services they offer.</p></article><article><span>02</span><h3>Create your account</h3><p>Choose Customer Space or Seller Studio in a few taps.</p></article><article><span>03</span><h3>Book with confidence</h3><p>Choose a time and send your booking request directly.</p></article></div></section>
+      <section className="landing-seller"><div><p className="eyebrow">FOR HAIR PROFESSIONALS</p><h2>Put your talent where customers can find it.</h2><p>Build a seller profile, show your services, and manage booking requests in Seller Studio.</p></div><Link className="button secondary" href={accountHref}>List your business</Link></section>
+    </main>
+    <footer><a className="brand" href="/">♛ CrownConnect</a><p>Hair, care & community.</p><span>South Africa · ZAR</span></footer>
+  </>;
 }

@@ -19,6 +19,33 @@ nav a:hover { color: #792d49; }
 .button.ghost { background: white; border: 1px solid #d8c7cf; color: #792d49; }
 main, footer { max-width: 1440px; margin: auto; padding-left: 5%; padding-right: 5%; }
 .hero { display: flex; justify-content: space-between; align-items: center; padding: 48px 0 42px; }
+.landing-page { max-width: 1180px; }
+.landing-header { max-width: none; }
+.landing-auth { display: flex; align-items: center; gap: 18px; }
+.sign-in-link { color: #792d49; text-decoration: none; font-size: 14px; font-weight: 700; }
+.landing-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(330px, .9fr); gap: 70px; align-items: center; padding: 76px 0; }
+.landing-hero h1 { max-width: 680px; }
+.landing-lead { max-width: 590px; color: #6f5b66; font-size: 19px; line-height: 1.65; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.trust-copy { color: #7f7078; font-size: 13px; margin-top: 18px; }
+.landing-art { min-height: 405px; border-radius: 22px; padding: 28px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; background: radial-gradient(circle at 74% 26%, #f5c6d5 0, #f5c6d5 10%, transparent 32%), linear-gradient(135deg, #5d1d3a, #9e3d62 62%, #dd9ab1); color: white; box-shadow: 0 24px 60px #5d1d3a29; }
+.landing-art:after { content: ''; position: absolute; width: 280px; height: 280px; right: -100px; bottom: -90px; border: 1px solid #ffffff88; border-radius: 50%; box-shadow: 0 0 0 30px #ffffff14, 0 0 0 60px #ffffff0c; }
+.art-pill { align-self: flex-start; border: 1px solid #ffffff80; border-radius: 99px; padding: 8px 11px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+.landing-art strong { position: absolute; right: 48px; top: 74px; font-family: 'Playfair Display', serif; font-size: 180px; opacity: .92; line-height: 1; }
+.landing-art p { position: relative; z-index: 1; font-family: 'Playfair Display', serif; font-size: 40px; line-height: 1.04; margin: 0; }
+.landing-art > span { position: relative; z-index: 1; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
+.landing-steps { border-top: 1px solid #eadfe3; padding: 50px 0; }
+.step-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 24px; }
+.step-grid article { border-top: 2px solid #792d49; padding-top: 16px; }
+.step-grid span { color: #792d49; font-weight: 700; font-size: 14px; }
+.step-grid p, .landing-seller p, .marketplace-intro p { color: #6f5b66; line-height: 1.6; }
+.landing-seller { display: flex; justify-content: space-between; align-items: center; gap: 30px; margin: 20px 0 68px; padding: 36px; border-radius: 16px; background: #faf2f5; }
+.landing-seller h2 { max-width: 600px; }
+.landing-seller p { max-width: 580px; margin-bottom: 0; }
+.marketplace-page { max-width: 1440px; margin: auto; padding: 46px 5% 60px; }
+.marketplace-intro { max-width: 650px; }
+.marketplace-intro h1 { font-size: clamp(40px, 4.4vw, 58px); }
+.market-count { color: #7f7078; font-size: 14px; margin: 0 0 18px; }
 .eyebrow { font-size: 12px; letter-spacing: 2px; font-weight: 700; color: #792d49; margin: 0; }
 h1, h2 { font-family: 'Playfair Display', Georgia, serif; font-weight: 500; letter-spacing: -1.5px; }
 h1 { font-size: clamp(42px, 5vw, 64px); line-height: 1.08; margin: 15px 0 20px; }
@@ -114,5 +141,5 @@ textarea { min-height: 108px; resize: vertical; }
 .service-row span { color: #792d49; font-weight: 600; font-size: 14px; }
 .service-row p { grid-column: 1 / -1; margin: 2px 0 0; font-size: 14px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #bb708d; outline-offset: 3px; }
-@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } .panel-grid { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid { gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: center; flex-direction: row; } .panel { padding: 22px; } .role-intro { margin-top: 48px; } .role-cards { grid-template-columns: 1fr; } .switch-strip { align-items: flex-start; flex-direction: column; } .menu-label { display: none; } }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } .panel-grid, .landing-hero { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } .landing-hero { gap: 36px; padding: 54px 0; } .landing-art { max-width: 540px; } }
+@media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid { gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: center; flex-direction: row; } .panel { padding: 22px; } .role-intro { margin-top: 48px; } .role-cards { grid-template-columns: 1fr; } .switch-strip { align-items: flex-start; flex-direction: column; } .menu-label { display: none; } .landing-header nav { display: none; } .landing-hero { padding: 42px 0; } .landing-art { min-height: 300px; } .landing-art strong { font-size: 130px; top: 64px; } .landing-art p { font-size: 31px; } .step-grid { grid-template-columns: 1fr; gap: 18px; } .landing-seller { align-items: flex-start; flex-direction: column; padding: 25px; } }
