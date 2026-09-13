@@ -8,7 +8,7 @@ export function AccountMenu({ role, name }: { role?: 'customer' | 'seller'; name
   const isSeller = role === 'seller';
   const close = () => setOpen(false);
   const signOut = () => {
-    window.location.replace('/signout-with-chatgpt?return_to=%2F');
+    window.location.assign('/api/session/sign-out');
   };
   return <div className="account-menu">
     <button className="menu-trigger" type="button" aria-expanded={open} aria-controls="account-navigation" onClick={() => setOpen(!open)}><span className="profile-avatar" aria-hidden>{(name?.trim().slice(0, 1) || 'U').toUpperCase()}</span><span className="menu-label">My profile</span></button>

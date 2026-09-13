@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export type ChatGPTUser = {
@@ -17,9 +17,11 @@ const PERCENT_ENCODED_UTF8 = 'percent-encoded-utf-8';
 const SIGN_IN_PATH = '/signin-with-chatgpt';
 const SIGN_OUT_PATH = '/signout-with-chatgpt';
 const CALLBACK_PATH = '/callback';
+const APP_SIGNED_OUT_COOKIE = 'crownconnect_signed_out';
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
-  const requestHeaders = await headers();
+  const [requestHeaders, cookieStore] = await Promise.all([headers(), cookies()]);
+  if (cookieStore.get(APP_SIGNED_OUT_COOKIE)?.value === '1') return null;
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) return null;
@@ -50,6 +52,11 @@ export async function requireChatGPTUser(
 
 export function chatGPTSignInPath(returnTo: string): string {
   const safeReturnTo = safeRelativeReturnPath(returnTo);
+  return `/api/session/sign-in?return_to=${encodeURIComponent(safeReturnTo)}`;
+}
+
+export function chatGPTProviderSignInPath(returnTo: string): string {
+  const safeReturnTo = safeRelativeReturnPath(returnTo);
   return `${SIGN_IN_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
@@ -71,6 +78,10 @@ function safeRelativeReturnPath(value: string): string {
   if (isReservedAuthPath(url.pathname)) return '/';
 
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function safeAppReturnPath(value: string): string {
+  return safeRelativeReturnPath(value);
 }
 
 function isReservedAuthPath(pathname: string): boolean {
