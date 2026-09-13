@@ -45,6 +45,23 @@ main, footer { max-width: 1440px; margin: auto; padding-left: 5%; padding-right:
 .marketplace-page { max-width: 1440px; margin: auto; padding: 46px 5% 60px; }
 .marketplace-intro { max-width: 650px; }
 .marketplace-intro h1 { font-size: clamp(40px, 4.4vw, 58px); }
+.products-page { max-width: 1180px; padding-top: 46px; padding-bottom: 64px; }
+.products-intro { max-width: 680px; }
+.products-intro h1 { font-size: clamp(40px, 4.4vw, 58px); }
+.products-intro > p:last-child, .products-callout p { color: #6f5b66; line-height: 1.6; font-size: 17px; }
+.product-category-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 38px 0 56px; }
+.product-category { min-height: 285px; border: 1px solid #e4d7dc; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; background: #fff; box-shadow: 0 10px 34px #4b203409; overflow: hidden; }
+.product-category .product-mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; margin-bottom: 24px; font-size: 20px; }
+.product-category h2 { font-size: 27px; margin-top: 9px; }
+.product-category > p:not(.eyebrow) { color: #6f5b66; line-height: 1.55; margin: 0; }
+.product-category > span { margin-top: auto; color: #792d49; font-size: 13px; font-weight: 700; padding-top: 18px; }
+.product-category.braids .product-mark { background: #f7e5eb; color: #8d3557; }
+.product-category.wigs .product-mark { background: #efe8fa; color: #624391; }
+.product-category.bundles .product-mark { background: #f8edde; color: #95612b; }
+.product-category.care .product-mark { background: #e5f2eb; color: #2e6b4b; }
+.products-callout { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 34px; border-radius: 16px; background: #faf2f5; }
+.products-callout h2 { max-width: 550px; }
+.products-callout p { max-width: 600px; margin-bottom: 0; }
 .market-count { color: #7f7078; font-size: 14px; margin: 0 0 18px; }
 .eyebrow { font-size: 12px; letter-spacing: 2px; font-weight: 700; color: #792d49; margin: 0; }
 h1, h2 { font-family: 'Playfair Display', Georgia, serif; font-weight: 500; letter-spacing: -1.5px; }
@@ -152,5 +169,5 @@ textarea { min-height: 108px; resize: vertical; }
 .customer-portfolio { margin: 26px 0; }
 .customer-portfolio h2 { font-size: 25px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #bb708d; outline-offset: 3px; }
-@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } .panel-grid, .landing-hero { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } .landing-hero { gap: 36px; padding: 54px 0; } .landing-art { max-width: 540px; } }
-@media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid { gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: center; flex-direction: row; } .panel { padding: 22px; } .role-intro { margin-top: 48px; } .role-cards { grid-template-columns: 1fr; } .switch-strip { align-items: flex-start; flex-direction: column; } .menu-label { display: none; } .landing-header nav { display: none; } .landing-hero { padding: 42px 0; } .landing-art { min-height: 300px; } .landing-art strong { font-size: 130px; top: 64px; } .landing-art p { font-size: 31px; } .step-grid { grid-template-columns: 1fr; gap: 18px; } .landing-seller { align-items: flex-start; flex-direction: column; padding: 25px; } }
+@media (max-width: 900px) { .grid, .product-category-grid { grid-template-columns: repeat(2, 1fr); } .panel-grid, .landing-hero { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } .landing-hero { gap: 36px; padding: 54px 0; } .landing-art { max-width: 540px; } }
+@media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid, .product-category-grid { grid-template-columns: 1fr; gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: center; flex-direction: row; } .panel { padding: 22px; } .role-intro { margin-top: 48px; } .role-cards { grid-template-columns: 1fr; } .switch-strip, .products-callout { align-items: flex-start; flex-direction: column; } .menu-label { display: none; } .landing-header nav { display: none; } .landing-hero { padding: 42px 0; } .landing-art { min-height: 300px; } .landing-art strong { font-size: 130px; top: 64px; } .landing-art p { font-size: 31px; } .step-grid { grid-template-columns: 1fr; gap: 18px; } .landing-seller { align-items: flex-start; flex-direction: column; padding: 25px; } }
