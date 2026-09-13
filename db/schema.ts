@@ -9,6 +9,17 @@ export const accountProfiles = sqliteTable('account_profiles', {
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 }, (table) => [index('idx_account_profiles_role').on(table.primaryRole)]);
 
+export const customerApplications = sqliteTable('customer_applications', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull().unique(),
+  fullName: text('full_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone').notNull().default(''),
+  role: text('role').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
 export const sellerProfiles = sqliteTable('seller_profiles', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   userId: text('user_id').notNull().unique(),

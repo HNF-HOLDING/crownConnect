@@ -36,6 +36,13 @@
       "when": 1789307970044,
       "tag": "0004_great_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789331470734,
+      "tag": "0005_rich_zarda",
+      "breakpoints": true
     }
   ]
 }
