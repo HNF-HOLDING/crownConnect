@@ -31,9 +31,16 @@ h3 { font-size: 18px; margin: 16px 0 6px; }
 .marketplace { padding-bottom: 50px; }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; border-top: 1px solid #eadfe3; padding-top: 32px; margin-bottom: 22px; }
 .section-heading > span, .muted { color: #7f7078; font-size: 14px; }
+.market-filters { display: grid; grid-template-columns: minmax(170px, 1.5fr) repeat(3, minmax(120px, 1fr)) auto auto; gap: 12px; align-items: end; padding: 16px; border: 1px solid #e7dce1; border-radius: 12px; background: #fff; margin: 0 0 26px; }
+.market-filters label { margin: 0; color: #705e67; font-size: 12px; }
+.market-filters label span { display: block; margin-bottom: 5px; font-weight: 700; letter-spacing: .2px; }
+.market-filters input, .market-filters select { padding: 10px; font-size: 14px; }
+.clear-link { color: #792d49; font-size: 14px; font-weight: 600; text-decoration: none; padding: 10px 2px; }
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .card { min-width: 0; position: relative; }
 .card > p { color: #786870; font-size: 14px; margin: 6px 0; }
+.card-bio { line-height: 1.5; min-height: 42px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.filter-empty { grid-column: 1 / -1; }
 .photo, .service-art { height: 280px; overflow: hidden; background: #e9dde2; border-radius: 12px; position: relative; }
 .photo img { transform: scale(1.08); }
 .badge { position: absolute; top: 14px; left: 14px; margin: 0 !important; background: #fffdfc; color: #792d49 !important; padding: 6px 10px; border-radius: 4px; font-size: 12px !important; font-weight: 600; }
@@ -67,6 +74,12 @@ textarea { min-height: 108px; resize: vertical; }
 .notice { padding: 14px 16px; border-radius: 9px; background: #f6edf1; color: #692b45; margin-bottom: 22px; }
 .empty { padding: 34px; text-align: center; background: #faf5f7; border-radius: 12px; color: #786870; }
 .service-summary { border-left: 4px solid #792d49; padding: 12px 18px; background: #faf5f7; margin: 22px 0; }
+.availability-copy { color: #5f4b55; line-height: 1.6; }
+.availability-field { border: 0; padding: 0; margin: 0; }
+.availability-field legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.day-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.day-option { width: auto; border: 1px solid #d8c7cf; border-radius: 999px; padding: 8px 10px; margin: 0; font-size: 14px; font-weight: 500; cursor: pointer; }
+.day-option input { width: auto; margin: 0 4px 0 0; accent-color: #792d49; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #bb708d; outline-offset: 3px; }
-@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } .panel-grid { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } }
-@media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .grid { gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .page-top { align-items: flex-start; flex-direction: column; } .panel { padding: 22px; } }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } .panel-grid { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid { gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: flex-start; flex-direction: column; } .panel { padding: 22px; } }

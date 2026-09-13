@@ -3,14 +3,16 @@ import { requireChatGPTUser, chatGPTSignOutPath } from '../chatgpt-auth';
 import { findSellerByUser, listBookingsForSeller } from '@/db/queries';
 
 export const dynamic = 'force-dynamic';
+const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string }> }) {
   const user = await requireChatGPTUser('/seller');
   const [profile, params] = await Promise.all([findSellerByUser(user.userId), searchParams]);
   const bookings = profile ? await listBookingsForSeller(profile.id) : [];
+  const availableDays = new Set(profile?.availability_days.split(',') ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   return (
     <main className="page-shell">
-      <div className="page-top"><Link className="brand" href="/">♛ CrownConnect</Link><div><Link className="button ghost small" href="/">Marketplace</Link> <a className="button ghost small" href={chatGPTSignOutPath('/')}>Sign out</a></div></div>
+      <div className="page-top"><Link className="brand" href="/">♛ CrownConnect</Link><div><Link className="button ghost small" href="/my-bookings">My bookings</Link> <Link className="button ghost small" href="/">Marketplace</Link> <a className="button ghost small" href={chatGPTSignOutPath('/')}>Sign out</a></div></div>
       <p className="eyebrow">SELLER STUDIO</p><h1>{profile ? `Welcome back, ${profile.business_name}` : 'Bring your business online.'}</h1>
       {params.saved && <p className="notice" role="status">Your seller profile is live. Customers can now send real booking requests.</p>}
       {params.updated && <p className="notice" role="status">Booking status updated.</p>}
@@ -26,6 +28,7 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
             <div className="field"><label htmlFor="servicePrice">Starting price (ZAR)</label><input id="servicePrice" name="servicePrice" type="number" min="1" max="100000" required defaultValue={profile?.service_price ?? 350} /></div>
             <div className="field full"><label htmlFor="featuredService">Featured service</label><input id="featuredService" name="featuredService" required maxLength={100} placeholder="e.g. Knotless braids" defaultValue={profile?.featured_service} /></div>
             <div className="field full"><label htmlFor="bio">About your business</label><textarea id="bio" name="bio" required maxLength={500} placeholder="Tell customers what makes your service special." defaultValue={profile?.bio} /></div>
+            <fieldset className="field full availability-field"><legend>Days you accept bookings</legend><div className="day-options">{days.map((day) => <label className="day-option" key={day}><input type="checkbox" name="availabilityDays" value={day} defaultChecked={availableDays.has(day)} /> {day}</label>)}</div></fieldset>
             <div className="form-actions"><span className="muted">Signed in as {user.email}</span><button className="button" type="submit">{profile ? 'Save changes' : 'Publish profile'}</button></div>
           </form>
         </section>

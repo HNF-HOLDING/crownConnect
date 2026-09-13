@@ -11,9 +11,10 @@ export const sellerProfiles = sqliteTable('seller_profiles', {
   featuredService: text('featured_service').notNull(),
   servicePrice: integer('service_price').notNull(),
   bio: text('bio').notNull(),
+  availabilityDays: text('availability_days').notNull().default('Mon,Tue,Wed,Thu,Fri,Sat'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
-});
+}, (table) => [index('idx_seller_profiles_city_specialty').on(table.city, table.specialty)]);
 
 export const bookingRequests = sqliteTable('booking_requests', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -28,4 +29,7 @@ export const bookingRequests = sqliteTable('booking_requests', {
   notes: text('notes').notNull().default(''),
   status: text('status').notNull().default('pending'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-}, (table) => [index('idx_booking_requests_seller_date').on(table.sellerId, table.appointmentDate)]);
+}, (table) => [
+  index('idx_booking_requests_seller_date').on(table.sellerId, table.appointmentDate),
+  index('idx_booking_requests_customer_created').on(table.customerUserId, table.createdAt),
+]);
