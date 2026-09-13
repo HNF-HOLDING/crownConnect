@@ -7,8 +7,7 @@ export function RegistrationForm() {
 
   function continueToSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const returnTo = `/register?role=${role}`;
-    window.location.assign(`/api/session/sign-in?return_to=${encodeURIComponent(returnTo)}`);
+    window.location.assign(`/register/details?role=${role}`);
   }
 
   return <form className="registration-form" onSubmit={continueToSignIn}>
@@ -16,6 +15,6 @@ export function RegistrationForm() {
       <label className="registration-choice"><input type="radio" name="role" value="customer" checked={role === 'customer'} onChange={() => setRole('customer')} /><span><strong>Customer</strong><small>Book hairstylists and explore hair products.</small></span></label>
       <label className="registration-choice"><input type="radio" name="role" value="seller" checked={role === 'seller'} onChange={() => setRole('seller')} /><span><strong>Service provider</strong><small>Create a salon profile, add services, and manage requests.</small></span></label>
     </fieldset>
-    <button className="button" type="submit">Continue to create account</button>
+    <button className="button" type="submit">Continue</button>
   </form>;
 }

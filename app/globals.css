@@ -131,6 +131,7 @@ footer { display: flex; align-items: center; justify-content: space-between; bor
 .registration-choice input { width: auto; margin-top: 3px; accent-color: #792d49; }
 .registration-choice strong, .registration-choice small { display: block; }
 .registration-choice small { color: #6f5b66; line-height: 1.45; margin-top: 3px; }
+.selected-role { margin: 0; padding: 12px 14px; border-radius: 8px; background: #faf2f5; color: #5e4550; font-size: 14px; }
 .customer-space { max-width: 920px; }
 .customer-space h1 { margin-bottom: 10px; }
 .customer-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 28px 0; }
