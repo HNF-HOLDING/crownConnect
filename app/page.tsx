@@ -8,11 +8,11 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   const user = await getChatGPTUser();
   const account = user ? await findAccountProfile(user.userId) : null;
-  const accountHref = account ? '/account' : '/welcome';
+  const accountHref = account ? '/account' : '/register';
   return <>
     <header className="site-header landing-header">
       <a className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</a>
-      {user ? <AccountMenu role={account?.primary_role} name={user.fullName ?? user.email} /> : <div className="landing-auth"><a className="sign-in-link" href={chatGPTSignInPath('/welcome')}>Sign in</a><a className="button small" href={chatGPTSignInPath('/welcome')}>Create account</a></div>}
+      {user ? <AccountMenu role={account?.primary_role} name={user.fullName ?? user.email} /> : <div className="landing-auth"><a className="sign-in-link" href={chatGPTSignInPath('/welcome')}>Sign in</a><a className="button small" href="/register">Create account</a></div>}
     </header>
     <main className="landing-page">
       <section className="landing-hero">

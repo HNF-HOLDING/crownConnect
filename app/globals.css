@@ -120,6 +120,17 @@ footer { display: flex; align-items: center; justify-content: space-between; bor
 .role-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: #f8eaf0; color: #792d49; font-size: 24px; }
 .role-already { margin: 24px 0; }
 .role-already a, .text-link { color: #792d49; font-weight: 700; }
+.register-page { max-width: 760px; min-height: 100vh; margin: 0 auto; padding: 42px 5% 70px; }
+.register-card { margin-top: 74px; border: 1px solid #e4d7dc; border-radius: 16px; padding: 34px; background: white; box-shadow: 0 10px 34px #4b203409; }
+.register-card > p:not(.eyebrow) { color: #6f5b66; line-height: 1.6; font-size: 17px; }
+.registration-form { display: grid; gap: 18px; margin-top: 28px; }
+.registration-form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
+.registration-form legend { font-size: 14px; font-weight: 700; margin-bottom: 9px; }
+.registration-choice { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 16px; border: 1px solid #dfd0d6; border-radius: 11px; cursor: pointer; }
+.registration-choice:has(input:checked) { border-color: #792d49; background: #fcf5f7; }
+.registration-choice input { width: auto; margin-top: 3px; accent-color: #792d49; }
+.registration-choice strong, .registration-choice small { display: block; }
+.registration-choice small { color: #6f5b66; line-height: 1.45; margin-top: 3px; }
 .customer-space { max-width: 920px; }
 .customer-space h1 { margin-bottom: 10px; }
 .customer-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 28px 0; }
