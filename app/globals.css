@@ -104,6 +104,8 @@ footer { display: flex; align-items: center; justify-content: space-between; bor
 .menu-popover { position: absolute; right: 0; top: calc(100% + 8px); width: 210px; border: 1px solid #e4d7dc; border-radius: 12px; padding: 8px; background: white; box-shadow: 0 16px 38px #4b203422; display: grid; }
 .menu-popover a { padding: 10px; text-decoration: none; color: #553d48; border-radius: 7px; font-size: 14px; }
 .menu-popover a:hover { background: #faf2f5; color: #792d49; }
+.menu-signout { border: 0; border-radius: 7px; padding: 10px; background: transparent; color: #553d48; text-align: left; font-size: 14px; cursor: pointer; }
+.menu-signout:hover { background: #faf2f5; color: #792d49; }
 .menu-title { margin: 3px 10px 7px; color: #792d49; font-size: 12px; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; }
 .role-page { max-width: 1000px; min-height: 100vh; margin: 0 auto; padding: 42px 5% 70px; }
 .role-intro { max-width: 650px; margin: 72px 0 30px; }

@@ -7,6 +7,9 @@ export function AccountMenu({ role, name }: { role?: 'customer' | 'seller'; name
   const [open, setOpen] = useState(false);
   const isSeller = role === 'seller';
   const close = () => setOpen(false);
+  const signOut = () => {
+    window.location.replace('/signout-with-chatgpt?return_to=%2F');
+  };
   return <div className="account-menu">
     <button className="menu-trigger" type="button" aria-expanded={open} aria-controls="account-navigation" onClick={() => setOpen(!open)}><span className="profile-avatar" aria-hidden>{(name?.trim().slice(0, 1) || 'U').toUpperCase()}</span><span className="menu-label">My profile</span></button>
     {open && <nav id="account-navigation" className="menu-popover" aria-label="Account navigation">
@@ -16,7 +19,7 @@ export function AccountMenu({ role, name }: { role?: 'customer' | 'seller'; name
       <Link href="/account" onClick={close}>{isSeller ? 'Open Seller Studio' : 'Open Customer Space'}</Link>
       <Link href={isSeller ? '/customer' : '/seller'} onClick={close}>{isSeller ? 'I want to book a service' : 'I provide services'}</Link>
       <Link href="/welcome?switch=1" onClick={close}>Change my default space</Link>
-      <a href="/signout-with-chatgpt?return_to=%2F">Sign out</a>
+      <button className="menu-signout" type="button" onClick={signOut}>Sign out</button>
     </nav>}
   </div>;
 }
