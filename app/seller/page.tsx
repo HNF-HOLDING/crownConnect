@@ -12,7 +12,7 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
   const availableDays = new Set(profile?.availability_days.split(',') ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   return (
     <main className="page-shell">
-      <div className="page-top"><Link className="brand" href="/">♛ CrownConnect</Link><div><Link className="button ghost small" href="/my-bookings">My bookings</Link> <Link className="button ghost small" href="/">Marketplace</Link> <a className="button ghost small" href={chatGPTSignOutPath('/')}>Sign out</a></div></div>
+      <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><div><Link className="button ghost small" href="/my-bookings">My bookings</Link> <Link className="button ghost small" href="/">Marketplace</Link> <a className="button ghost small" href={chatGPTSignOutPath('/')}>Sign out</a></div></div>
       <p className="eyebrow">SELLER STUDIO</p><h1>{profile ? `Welcome back, ${profile.business_name}` : 'Bring your business online.'}</h1>
       {params.saved && <p className="notice" role="status">Your seller profile is live. Customers can now send real booking requests.</p>}
       {params.updated && <p className="notice" role="status">Booking status updated.</p>}

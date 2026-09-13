@@ -19,7 +19,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ q
   return (
     <>
       <header className="site-header">
-        <Link className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</Link>
+        <a className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</a>
         <nav aria-label="Primary navigation"><a href="#stylists">Find a stylist</a><Link href="/my-bookings">My bookings</Link><Link href="/seller">Seller studio</Link></nav>
         <Link className="button secondary" href="/seller">{user ? 'Open seller studio' : 'List your business'} ↗</Link>
       </header>
@@ -55,7 +55,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ q
           </div>
         </section>
       </main>
-      <footer><Link className="brand" href="/">♛ CrownConnect</Link><p>Hair, care & community.</p><span>South Africa · ZAR</span></footer>
+      <footer><a className="brand" href="/">♛ CrownConnect</a><p>Hair, care & community.</p><span>South Africa · ZAR</span></footer>
     </>
   );
 }

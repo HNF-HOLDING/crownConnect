@@ -8,7 +8,7 @@ export default async function MyBookings({ searchParams }: { searchParams: Promi
   const user = await requireChatGPTUser('/my-bookings');
   const [bookings, params] = await Promise.all([listBookingsForCustomer(user.userId), searchParams]);
   return <main className="page-shell">
-    <div className="page-top"><Link className="brand" href="/">♛ CrownConnect</Link><Link className="button ghost small" href="/">Find a stylist</Link></div>
+    <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><Link className="button ghost small" href="/">Find a stylist</Link></div>
     <p className="eyebrow">CUSTOMER SPACE</p><h1>Your booking requests.</h1>
     {params.sent && <p className="notice" role="status">Request sent. The stylist will confirm or decline it here.</p>}
     {params.cancelled && <p className="notice" role="status">Your pending request was cancelled.</p>}
