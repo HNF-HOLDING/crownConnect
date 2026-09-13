@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getChatGPTUser } from './chatgpt-auth';
-import { listSellerCities, listSellers } from '@/db/queries';
+import { findAccountProfile, listSellerCities, listSellers } from '@/db/queries';
+import { AccountMenu } from './account-menu';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +16,14 @@ const samples = [
 export default async function Home({ searchParams }: { searchParams: Promise<{ q?: string; city?: string; specialty?: string; maxPrice?: string }> }) {
   const params = await searchParams;
   const q = params.q?.trim().slice(0, 80) ?? '', city = params.city?.trim().slice(0, 80) ?? '', specialty = params.specialty?.trim().slice(0, 40) ?? '', maxPrice = Number(params.maxPrice) || undefined;
-  const [user, sellers, cities] = await Promise.all([getChatGPTUser(), listSellers({ q, city, specialty, maxPrice }), listSellerCities()]);
+  const user = await getChatGPTUser();
+  const [account, sellers, cities] = await Promise.all([user ? findAccountProfile(user.userId) : Promise.resolve(null), listSellers({ q, city, specialty, maxPrice }), listSellerCities()]);
   return (
     <>
       <header className="site-header">
         <a className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</a>
-        <nav aria-label="Primary navigation"><a href="#stylists">Find a stylist</a><Link href="/my-bookings">My bookings</Link><Link href="/seller">Seller studio</Link></nav>
-        <Link className="button secondary" href="/seller">{user ? 'Open seller studio' : 'List your business'} ↗</Link>
+        <nav aria-label="Primary navigation"><a href="#stylists">Find a stylist</a><Link href="/account">{account?.primary_role === 'seller' ? 'Seller Studio' : 'Customer Space'}</Link></nav>
+        {user ? <AccountMenu role={account?.primary_role} /> : <Link className="button secondary" href="/welcome">Choose your space ↗</Link>}
       </header>
       <main>
         <section className="hero">

@@ -1,5 +1,14 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+export const accountProfiles = sqliteTable('account_profiles', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull().unique(),
+  email: text('email').notNull(),
+  primaryRole: text('primary_role').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+}, (table) => [index('idx_account_profiles_role').on(table.primaryRole)]);
+
 export const sellerProfiles = sqliteTable('seller_profiles', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   userId: text('user_id').notNull().unique(),

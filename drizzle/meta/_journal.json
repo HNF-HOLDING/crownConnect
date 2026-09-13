@@ -22,6 +22,13 @@
       "when": 1789278796448,
       "tag": "0002_fuzzy_network",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789280030985,
+      "tag": "0003_wonderful_jack_murdock",
+      "breakpoints": true
     }
   ]
 }

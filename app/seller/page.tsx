@@ -1,20 +1,25 @@
 import Link from 'next/link';
-import { requireChatGPTUser, chatGPTSignOutPath } from '../chatgpt-auth';
+import { requireChatGPTUser } from '../chatgpt-auth';
 import { findSellerByUser, listBookingsForSeller, listSellerServices } from '@/db/queries';
+import { findAccountProfile } from '@/db/queries';
+import { redirect } from 'next/navigation';
+import { AccountMenu } from '@/app/account-menu';
 
 export const dynamic = 'force-dynamic';
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string; service?: string }> }) {
+export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string; service?: string; role?: string }> }) {
   const user = await requireChatGPTUser('/seller');
-  const [profile, params] = await Promise.all([findSellerByUser(user.userId), searchParams]);
+  const [profile, account, params] = await Promise.all([findSellerByUser(user.userId), findAccountProfile(user.userId), searchParams]);
+  if (!account) redirect('/welcome');
   const bookings = profile ? await listBookingsForSeller(profile.id) : [];
   const services = profile ? await listSellerServices(profile.id) : [];
   const availableDays = new Set(profile?.availability_days.split(',') ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   return (
     <main className="page-shell">
-      <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><div><Link className="button ghost small" href="/my-bookings">My bookings</Link> <Link className="button ghost small" href="/">Marketplace</Link> <a className="button ghost small" href={chatGPTSignOutPath('/')}>Sign out</a></div></div>
+      <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><AccountMenu role={account.primary_role} /></div>
       <p className="eyebrow">SELLER STUDIO</p><h1>{profile ? `Welcome back, ${profile.business_name}` : 'Bring your business online.'}</h1>
+      {account.primary_role !== 'seller' && <p className="notice">You’re in Seller Studio. <Link href="/welcome?switch=1">Make Seller Studio your default space</Link>, or keep Customer Space as your home.</p>}
       {params.saved && <p className="notice" role="status">Your seller profile is live. Customers can now send real booking requests.</p>}
       {params.updated && <p className="notice" role="status">Booking status updated.</p>}
       {params.service && <p className="notice" role="status">Service added to your booking menu.</p>}

@@ -1,14 +1,18 @@
 import Link from 'next/link';
 import { requireChatGPTUser } from '@/app/chatgpt-auth';
 import { listBookingsForCustomer } from '@/db/queries';
+import { findAccountProfile } from '@/db/queries';
+import { redirect } from 'next/navigation';
+import { AccountMenu } from '@/app/account-menu';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MyBookings({ searchParams }: { searchParams: Promise<{ sent?: string; cancelled?: string }> }) {
   const user = await requireChatGPTUser('/my-bookings');
-  const [bookings, params] = await Promise.all([listBookingsForCustomer(user.userId), searchParams]);
+  const [bookings, account, params] = await Promise.all([listBookingsForCustomer(user.userId), findAccountProfile(user.userId), searchParams]);
+  if (!account) redirect('/welcome');
   return <main className="page-shell">
-    <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><Link className="button ghost small" href="/">Find a stylist</Link></div>
+    <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><AccountMenu role={account.primary_role} /></div>
     <p className="eyebrow">CUSTOMER SPACE</p><h1>Your booking requests.</h1>
     {params.sent && <p className="notice" role="status">Request sent. The stylist will confirm or decline it here.</p>}
     {params.cancelled && <p className="notice" role="status">Your pending request was cancelled.</p>}
