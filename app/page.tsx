@@ -12,7 +12,7 @@ export default async function Home() {
     <header className="site-header landing-header">
       <a className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</a>
       <nav aria-label="Primary navigation"><a href="/marketplace">Explore stylists</a><a href="#how-it-works">How it works</a></nav>
-      {user ? <AccountMenu role={account?.primary_role} /> : <div className="landing-auth"><a className="sign-in-link" href={chatGPTSignInPath('/welcome')}>Sign in</a><a className="button small" href={chatGPTSignInPath('/welcome')}>Create account</a></div>}
+      {user ? <AccountMenu role={account?.primary_role} name={user.fullName ?? user.email} /> : <div className="landing-auth"><a className="sign-in-link" href={chatGPTSignInPath('/welcome')}>Sign in</a><a className="button small" href={chatGPTSignInPath('/welcome')}>Create account</a></div>}
     </header>
     <main className="landing-page">
       <section className="landing-hero">

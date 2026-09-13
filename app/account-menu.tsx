@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
-export function AccountMenu({ role }: { role?: 'customer' | 'seller' }) {
+export function AccountMenu({ role, name }: { role?: 'customer' | 'seller'; name?: string }) {
   const [open, setOpen] = useState(false);
   const isSeller = role === 'seller';
   const close = () => setOpen(false);
   return <div className="account-menu">
-    <button className="menu-trigger" type="button" aria-expanded={open} aria-controls="account-navigation" onClick={() => setOpen(!open)}><span aria-hidden>☰</span><span className="menu-label">Menu</span></button>
+    <button className="menu-trigger" type="button" aria-expanded={open} aria-controls="account-navigation" onClick={() => setOpen(!open)}><span className="profile-avatar" aria-hidden>{(name?.trim().slice(0, 1) || 'U').toUpperCase()}</span><span className="menu-label">My profile</span></button>
     {open && <nav id="account-navigation" className="menu-popover" aria-label="Account navigation">
       <p className="menu-title">{isSeller ? 'Seller menu' : 'Customer menu'}</p>
       <Link href="/marketplace" onClick={close}>Explore stylists</Link>

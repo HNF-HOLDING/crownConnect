@@ -17,7 +17,7 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
   const availableDays = new Set(profile?.availability_days.split(',') ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   return (
     <main className="page-shell">
-      <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><AccountMenu role={account.primary_role} /></div>
+      <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><AccountMenu role={account.primary_role} name={user.fullName ?? user.email} /></div>
       <p className="eyebrow">SELLER STUDIO</p><h1>{profile ? `Welcome back, ${profile.business_name}` : 'Bring your business online.'}</h1>
       {account.primary_role !== 'seller' && <p className="notice">You’re in Seller Studio. <Link href="/welcome?switch=1">Make Seller Studio your default space</Link>, or keep Customer Space as your home.</p>}
       {params.saved && <p className="notice" role="status">Your seller profile is live. Customers can now send real booking requests.</p>}

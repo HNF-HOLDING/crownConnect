@@ -83,7 +83,7 @@ footer { display: flex; align-items: center; justify-content: space-between; bor
 .page-top { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 36px; }
 .account-menu { position: relative; z-index: 5; }
 .menu-trigger { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #d8c7cf; border-radius: 7px; background: white; color: #792d49; padding: 10px 13px; font-weight: 700; font-size: 14px; }
-.menu-trigger span:first-child { font-size: 18px; line-height: 1; }
+.profile-avatar { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #792d49; color: white; font-size: 12px; line-height: 1; }
 .menu-popover { position: absolute; right: 0; top: calc(100% + 8px); width: 210px; border: 1px solid #e4d7dc; border-radius: 12px; padding: 8px; background: white; box-shadow: 0 16px 38px #4b203422; display: grid; }
 .menu-popover a { padding: 10px; text-decoration: none; color: #553d48; border-radius: 7px; font-size: 14px; }
 .menu-popover a:hover { background: #faf2f5; color: #792d49; }
