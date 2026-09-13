@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requireChatGPTUser } from '../chatgpt-auth';
-import { findSellerByUser, listBookingsForSeller, listSellerServices } from '@/db/queries';
+import { findSellerByUser, listBookingsForSeller, listSellerMedia, listSellerServices } from '@/db/queries';
 import { findAccountProfile } from '@/db/queries';
 import { redirect } from 'next/navigation';
 import { AccountMenu } from '@/app/account-menu';
@@ -8,12 +8,12 @@ import { AccountMenu } from '@/app/account-menu';
 export const dynamic = 'force-dynamic';
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string; service?: string; role?: string }> }) {
+export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string; service?: string; media?: string; role?: string }> }) {
   const user = await requireChatGPTUser('/seller');
   const [profile, account, params] = await Promise.all([findSellerByUser(user.userId), findAccountProfile(user.userId), searchParams]);
   if (!account) redirect('/welcome');
   const bookings = profile ? await listBookingsForSeller(profile.id) : [];
-  const services = profile ? await listSellerServices(profile.id) : [];
+  const [services, media] = profile ? await Promise.all([listSellerServices(profile.id), listSellerMedia(profile.id)]) : [[], []];
   const availableDays = new Set(profile?.availability_days.split(',') ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   return (
     <main className="page-shell">
@@ -23,6 +23,7 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
       {params.saved && <p className="notice" role="status">Your seller profile is live. Customers can now send real booking requests.</p>}
       {params.updated && <p className="notice" role="status">Booking status updated.</p>}
       {params.service && <p className="notice" role="status">Service added to your booking menu.</p>}
+      {params.media && <p className="notice" role="status">Your portfolio upload is live.</p>}
       <div className="panel-grid">
         <section className="panel" aria-labelledby="profile-heading">
           <p className="eyebrow">YOUR PROFILE</p><h2 id="profile-heading">{profile ? 'Update your listing' : 'Create your seller profile'}</h2>
@@ -48,6 +49,10 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
             <div className="field full"><label htmlFor="description">Short description (optional)</label><input id="description" name="description" maxLength={240} placeholder="What is included?" /></div>
             <div className="form-actions"><span className="muted">Your current featured service remains available too.</span><button className="button" type="submit">Add service</button></div>
           </form><div className="service-menu">{services.length ? services.map((service) => <article key={service.id} className="service-row"><strong>{service.name}</strong><span>R{service.price.toLocaleString('en-ZA')} · {service.duration_minutes} min</span>{service.description && <p>{service.description}</p>}</article>) : <p className="muted">No extra services yet. Your featured service is still bookable.</p>}</div></>}
+        </section>
+        <section className="panel" aria-labelledby="portfolio-heading">
+          <p className="eyebrow">YOUR PORTFOLIO</p><h2 id="portfolio-heading">Show your work</h2>
+          {!profile ? <div className="empty">Publish your profile before uploading photos or videos.</div> : <><p>Upload hairstyle photos or short videos so customers can see your work before booking.</p><form action="/api/media" method="post" encType="multipart/form-data" className="upload-form"><label htmlFor="media">Photo or video <span className="muted">JPG, PNG, WebP, MP4, or WebM · photos up to 10 MB, videos up to 25 MB</span></label><input id="media" name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" required /><button className="button small" type="submit">Upload to portfolio</button></form>{media.length ? <div className="portfolio-grid">{media.map((item) => item.media_type === 'image' ? <img key={item.id} src={`/api/media/${item.id}`} alt={`${profile.business_name} portfolio: ${item.file_name}`} /> : <video key={item.id} controls preload="metadata"><source src={`/api/media/${item.id}`} type={item.content_type} /></video>)}</div> : <p className="muted">Your portfolio is empty. Add your best work first.</p>}</>}
         </section>
         <section className="panel" aria-labelledby="requests-heading">
           <p className="eyebrow">INBOX</p><h2 id="requests-heading">Booking requests</h2>

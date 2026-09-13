@@ -52,3 +52,13 @@ export const sellerServices = sqliteTable('seller_services', {
   description: text('description').notNull().default(''),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 }, (table) => [index('idx_seller_services_seller_created').on(table.sellerId, table.createdAt)]);
+
+export const sellerMedia = sqliteTable('seller_media', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  sellerId: integer('seller_id').notNull(),
+  objectKey: text('object_key').notNull().unique(),
+  mediaType: text('media_type').notNull(),
+  contentType: text('content_type').notNull(),
+  fileName: text('file_name').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+}, (table) => [index('idx_seller_media_seller_created').on(table.sellerId, table.createdAt)]);
