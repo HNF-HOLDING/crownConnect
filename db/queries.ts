@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 
-export type Seller = { id: number; user_id: string; email: string; business_name: string; city: string; phone: string; specialty: string; featured_service: string; service_price: number; bio: string; availability_days: string };
+export type Seller = { id: number; user_id: string; email: string; business_name: string; city: string; phone: string; specialty: string; featured_service: string; service_price: number; bio: string; availability_days: string; cover_media_id?: number | null };
 export type Booking = { id: number; seller_id: number; customer_name: string; customer_email: string; customer_phone: string; service_name: string; appointment_date: string; appointment_time: string; notes: string; status: string; created_at: number; business_name?: string; city?: string };
 export type SellerService = { id: number; seller_id: number; name: string; price: number; duration_minutes: number; description: string; created_at: number };
 export type AccountProfile = { id: number; user_id: string; email: string; primary_role: 'customer' | 'seller'; created_at: number; updated_at: number };
@@ -17,7 +17,7 @@ export async function listSellers(filters: SellerSearch = {}) {
   if (filters.maxPrice) { clauses.push('service_price <= ?'); values.push(filters.maxPrice); }
   if (filters.q) { clauses.push('(business_name LIKE ? OR featured_service LIKE ? OR bio LIKE ?)'); const match = `%${filters.q}%`; values.push(match, match, match); }
   const where = clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '';
-  const result = await database().prepare(`SELECT ${sellerColumns} FROM seller_profiles${where} ORDER BY updated_at DESC LIMIT 48`).bind(...values).all<Seller>();
+  const result = await database().prepare(`SELECT ${sellerColumns}, (SELECT id FROM seller_media WHERE seller_id = seller_profiles.id AND media_type = 'image' ORDER BY created_at DESC LIMIT 1) AS cover_media_id FROM seller_profiles${where} ORDER BY updated_at DESC LIMIT 48`).bind(...values).all<Seller>();
   return result.results;
 }
 

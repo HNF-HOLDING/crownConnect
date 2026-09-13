@@ -8,7 +8,7 @@ import { AccountMenu } from '@/app/account-menu';
 export const dynamic = 'force-dynamic';
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string; service?: string; media?: string; role?: string }> }) {
+export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string; service?: string; media?: string; mediaDeleted?: string; role?: string }> }) {
   const user = await requireChatGPTUser('/seller');
   const [profile, account, params] = await Promise.all([findSellerByUser(user.userId), findAccountProfile(user.userId), searchParams]);
   if (!account) redirect('/welcome');
@@ -24,6 +24,7 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
       {params.updated && <p className="notice" role="status">Booking status updated.</p>}
       {params.service && <p className="notice" role="status">Service added to your booking menu.</p>}
       {params.media && <p className="notice" role="status">Your portfolio upload is live.</p>}
+      {params.mediaDeleted && <p className="notice" role="status">Portfolio item removed.</p>}
       <div className="panel-grid">
         <section className="panel" aria-labelledby="profile-heading">
           <p className="eyebrow">YOUR PROFILE</p><h2 id="profile-heading">{profile ? 'Update your listing' : 'Create your seller profile'}</h2>
@@ -52,7 +53,7 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
         </section>
         <section className="panel" aria-labelledby="portfolio-heading">
           <p className="eyebrow">YOUR PORTFOLIO</p><h2 id="portfolio-heading">Show your work</h2>
-          {!profile ? <div className="empty">Publish your profile before uploading photos or videos.</div> : <><p>Upload hairstyle photos or short videos so customers can see your work before booking.</p><form action="/api/media" method="post" encType="multipart/form-data" className="upload-form"><label htmlFor="media">Photo or video <span className="muted">JPG, PNG, WebP, MP4, or WebM · photos up to 10 MB, videos up to 25 MB</span></label><input id="media" name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" required /><button className="button small" type="submit">Upload to portfolio</button></form>{media.length ? <div className="portfolio-grid">{media.map((item) => item.media_type === 'image' ? <img key={item.id} src={`/api/media/${item.id}`} alt={`${profile.business_name} portfolio: ${item.file_name}`} /> : <video key={item.id} controls preload="metadata"><source src={`/api/media/${item.id}`} type={item.content_type} /></video>)}</div> : <p className="muted">Your portfolio is empty. Add your best work first.</p>}</>}
+          {!profile ? <div className="empty">Publish your profile before uploading photos or videos.</div> : <><p>Upload hairstyle photos or short videos so customers can see your work before booking.</p><form action="/api/media" method="post" encType="multipart/form-data" className="upload-form"><label htmlFor="media">Photo or video <span className="muted">JPG, PNG, WebP, MP4, or WebM · photos up to 10 MB, videos up to 25 MB</span></label><input id="media" name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" required /><button className="button small" type="submit">Upload to portfolio</button></form>{media.length ? <div className="portfolio-grid">{media.map((item) => <figure className="portfolio-item" key={item.id}>{item.media_type === 'image' ? <img src={`/api/media/${item.id}`} alt={`${profile.business_name} portfolio: ${item.file_name}`} /> : <video controls preload="metadata"><source src={`/api/media/${item.id}`} type={item.content_type} /></video>}<form action="/api/media/delete" method="post"><input type="hidden" name="mediaId" value={item.id} /><button className="remove-media" type="submit" aria-label={`Remove ${item.file_name}`}>Remove</button></form></figure>)}</div> : <p className="muted">Your portfolio is empty. Add your best work first.</p>}</>}
         </section>
         <section className="panel" aria-labelledby="requests-heading">
           <p className="eyebrow">INBOX</p><h2 id="requests-heading">Booking requests</h2>
