@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 
 export type Seller = { id: number; user_id: string; email: string; business_name: string; city: string; phone: string; specialty: string; featured_service: string; service_price: number; bio: string; availability_days: string };
 export type Booking = { id: number; seller_id: number; customer_name: string; customer_email: string; customer_phone: string; service_name: string; appointment_date: string; appointment_time: string; notes: string; status: string; created_at: number; business_name?: string; city?: string };
+export type SellerService = { id: number; seller_id: number; name: string; price: number; duration_minutes: number; description: string; created_at: number };
 export type SellerSearch = { q?: string; city?: string; specialty?: string; maxPrice?: number };
 
 function database() { if (!env.DB) throw new Error('Database unavailable'); return env.DB }
@@ -34,6 +35,20 @@ export async function findSellerByUser(userId: string) {
 export async function listBookingsForSeller(sellerId: number) {
   const result = await database().prepare('SELECT id, seller_id, customer_name, customer_email, customer_phone, service_name, appointment_date, appointment_time, notes, status, created_at FROM booking_requests WHERE seller_id = ? ORDER BY appointment_date, appointment_time LIMIT 100').bind(sellerId).all<Booking>();
   return result.results;
+}
+
+export async function listSellerServices(sellerId: number) {
+  const result = await database().prepare('SELECT id, seller_id, name, price, duration_minutes, description, created_at FROM seller_services WHERE seller_id = ? ORDER BY created_at DESC LIMIT 24').bind(sellerId).all<SellerService>();
+  return result.results;
+}
+
+export async function findSellerService(sellerId: number, serviceId: number) {
+  return database().prepare('SELECT id, seller_id, name, price, duration_minutes, description, created_at FROM seller_services WHERE id = ? AND seller_id = ? LIMIT 1').bind(serviceId, sellerId).first<SellerService>();
+}
+
+export async function listTakenTimes(sellerId: number, date: string) {
+  const result = await database().prepare("SELECT appointment_time FROM booking_requests WHERE seller_id = ? AND appointment_date = ? AND status IN ('pending', 'confirmed')").bind(sellerId, date).all<{ appointment_time: string }>();
+  return result.results.map((row) => row.appointment_time);
 }
 
 export async function listBookingsForCustomer(userId: string) {

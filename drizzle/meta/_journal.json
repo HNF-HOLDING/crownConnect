@@ -15,6 +15,13 @@
       "when": 1789242917677,
       "tag": "0001_large_siren",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789278796448,
+      "tag": "0002_fuzzy_network",
+      "breakpoints": true
     }
   ]
 }

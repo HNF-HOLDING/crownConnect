@@ -33,3 +33,13 @@ export const bookingRequests = sqliteTable('booking_requests', {
   index('idx_booking_requests_seller_date').on(table.sellerId, table.appointmentDate),
   index('idx_booking_requests_customer_created').on(table.customerUserId, table.createdAt),
 ]);
+
+export const sellerServices = sqliteTable('seller_services', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  sellerId: integer('seller_id').notNull(),
+  name: text('name').notNull(),
+  price: integer('price').notNull(),
+  durationMinutes: integer('duration_minutes').notNull(),
+  description: text('description').notNull().default(''),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+}, (table) => [index('idx_seller_services_seller_created').on(table.sellerId, table.createdAt)]);

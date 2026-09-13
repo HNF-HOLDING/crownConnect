@@ -75,11 +75,16 @@ textarea { min-height: 108px; resize: vertical; }
 .empty { padding: 34px; text-align: center; background: #faf5f7; border-radius: 12px; color: #786870; }
 .service-summary { border-left: 4px solid #792d49; padding: 12px 18px; background: #faf5f7; margin: 22px 0; }
 .availability-copy { color: #5f4b55; line-height: 1.6; }
+.availability-warning { grid-column: 1 / -1; margin: 0; color: #8b2929; background: #fdf0f0; border-radius: 7px; padding: 10px 12px; font-size: 14px; }
 .availability-field { border: 0; padding: 0; margin: 0; }
 .availability-field legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
 .day-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .day-option { width: auto; border: 1px solid #d8c7cf; border-radius: 999px; padding: 8px 10px; margin: 0; font-size: 14px; font-weight: 500; cursor: pointer; }
 .day-option input { width: auto; margin: 0 4px 0 0; accent-color: #792d49; }
+.service-menu { display: grid; gap: 10px; margin-top: 22px; }
+.service-row { border-top: 1px solid #eadfe3; padding-top: 12px; display: grid; grid-template-columns: 1fr auto; gap: 5px 16px; }
+.service-row span { color: #792d49; font-weight: 600; font-size: 14px; }
+.service-row p { grid-column: 1 / -1; margin: 2px 0 0; font-size: 14px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #bb708d; outline-offset: 3px; }
 @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } .panel-grid { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid { gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: flex-start; flex-direction: column; } .panel { padding: 22px; } }

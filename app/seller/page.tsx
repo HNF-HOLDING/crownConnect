@@ -1,14 +1,15 @@
 import Link from 'next/link';
 import { requireChatGPTUser, chatGPTSignOutPath } from '../chatgpt-auth';
-import { findSellerByUser, listBookingsForSeller } from '@/db/queries';
+import { findSellerByUser, listBookingsForSeller, listSellerServices } from '@/db/queries';
 
 export const dynamic = 'force-dynamic';
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string }> }) {
+export default async function SellerStudio({ searchParams }: { searchParams: Promise<{ saved?: string; updated?: string; service?: string }> }) {
   const user = await requireChatGPTUser('/seller');
   const [profile, params] = await Promise.all([findSellerByUser(user.userId), searchParams]);
   const bookings = profile ? await listBookingsForSeller(profile.id) : [];
+  const services = profile ? await listSellerServices(profile.id) : [];
   const availableDays = new Set(profile?.availability_days.split(',') ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   return (
     <main className="page-shell">
@@ -16,6 +17,7 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
       <p className="eyebrow">SELLER STUDIO</p><h1>{profile ? `Welcome back, ${profile.business_name}` : 'Bring your business online.'}</h1>
       {params.saved && <p className="notice" role="status">Your seller profile is live. Customers can now send real booking requests.</p>}
       {params.updated && <p className="notice" role="status">Booking status updated.</p>}
+      {params.service && <p className="notice" role="status">Service added to your booking menu.</p>}
       <div className="panel-grid">
         <section className="panel" aria-labelledby="profile-heading">
           <p className="eyebrow">YOUR PROFILE</p><h2 id="profile-heading">{profile ? 'Update your listing' : 'Create your seller profile'}</h2>
@@ -31,6 +33,16 @@ export default async function SellerStudio({ searchParams }: { searchParams: Pro
             <fieldset className="field full availability-field"><legend>Days you accept bookings</legend><div className="day-options">{days.map((day) => <label className="day-option" key={day}><input type="checkbox" name="availabilityDays" value={day} defaultChecked={availableDays.has(day)} /> {day}</label>)}</div></fieldset>
             <div className="form-actions"><span className="muted">Signed in as {user.email}</span><button className="button" type="submit">{profile ? 'Save changes' : 'Publish profile'}</button></div>
           </form>
+        </section>
+        <section className="panel" aria-labelledby="services-heading">
+          <p className="eyebrow">SERVICE MENU</p><h2 id="services-heading">What customers can book</h2>
+          {!profile ? <div className="empty">Publish your profile before adding services.</div> : <><p>Add the services, prices, and expected time customers need to decide.</p><form action="/api/services" method="post" className="form-grid compact-form">
+            <div className="field full"><label htmlFor="name">Service name</label><input id="name" name="name" required maxLength={100} placeholder="e.g. Knotless braids" /></div>
+            <div className="field"><label htmlFor="price">Price (ZAR)</label><input id="price" name="price" type="number" min="1" max="100000" required /></div>
+            <div className="field"><label htmlFor="duration">Duration (minutes)</label><input id="duration" name="duration" type="number" min="15" max="720" step="15" required defaultValue={120} /></div>
+            <div className="field full"><label htmlFor="description">Short description (optional)</label><input id="description" name="description" maxLength={240} placeholder="What is included?" /></div>
+            <div className="form-actions"><span className="muted">Your current featured service remains available too.</span><button className="button" type="submit">Add service</button></div>
+          </form><div className="service-menu">{services.length ? services.map((service) => <article key={service.id} className="service-row"><strong>{service.name}</strong><span>R{service.price.toLocaleString('en-ZA')} · {service.duration_minutes} min</span>{service.description && <p>{service.description}</p>}</article>) : <p className="muted">No extra services yet. Your featured service is still bookable.</p>}</div></>}
         </section>
         <section className="panel" aria-labelledby="requests-heading">
           <p className="eyebrow">INBOX</p><h2 id="requests-heading">Booking requests</h2>
