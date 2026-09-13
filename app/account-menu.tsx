@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { chatGPTSignOutPath } from './chatgpt-auth';
 
 export function AccountMenu({ role }: { role?: 'customer' | 'seller' }) {
   const [open, setOpen] = useState(false);
@@ -16,7 +15,7 @@ export function AccountMenu({ role }: { role?: 'customer' | 'seller' }) {
       <Link href="/account" onClick={close}>{isSeller ? 'Open Seller Studio' : 'Open Customer Space'}</Link>
       <Link href={isSeller ? '/customer' : '/seller'} onClick={close}>{isSeller ? 'I want to book a service' : 'I provide services'}</Link>
       <Link href="/welcome?switch=1" onClick={close}>Change my default space</Link>
-      <a href={chatGPTSignOutPath('/')}>Sign out</a>
+      <a href="/signout-with-chatgpt?return_to=%2F">Sign out</a>
     </nav>}
   </div>;
 }
