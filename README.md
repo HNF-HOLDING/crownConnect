@@ -26,9 +26,13 @@ pnpm build
 
 ## Data and deployment
 
-The production site uses the `DB` D1 binding declared in `.openai/hosting.json`. Drizzle migrations live in `drizzle/`; apply the generated migration when provisioning a new database.
+The live production site uses the `DB` D1 binding declared in `.openai/hosting.json`. Drizzle migrations live in `drizzle/`; apply the generated migration when provisioning a new database.
 
-The hosted site is currently private to its owner. Before a public release, confirm that the supplied salon flyer and all business details may be used commercially, then change the site access policy deliberately.
+The hosted site is public. Confirm that supplied salon imagery and business details may be used commercially before wider promotion.
+
+## AWS migration
+
+The current production application runs on its managed platform. The initial AWS foundation is in `aws/` and targets Africa (Cape Town): PostgreSQL in RDS, S3 media storage, and Cognito identity. The application must be converted from its current D1/R2 and platform-sign-in integrations before the AWS stack can replace the working public site.
 
 ## Key files
 
