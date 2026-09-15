@@ -11,12 +11,70 @@ Parameters:
   DatabaseUsername:
     Type: String
     Default: crownadmin
-  DatabasePassword:
-    Type: String
-    NoEcho: true
-    MinLength: 12
 
 Resources:
+  Network:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.40.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub crownconnect-${Environment}
+
+  PrivateSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Network
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.40.10.0/24
+
+  PrivateSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Network
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.40.11.0/24
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: CrownConnect private database subnets
+      SubnetIds: [!Ref PrivateSubnetOne, !Ref PrivateSubnetTwo]
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow PostgreSQL only from CrownConnect API Lambda
+      VpcId: !Ref Network
+
+  ApiSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CrownConnect API Lambda security group
+      VpcId: !Ref Network
+
+  DatabaseIngressFromApi:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DatabaseSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref ApiSecurityGroup
+
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub crownconnect/${Environment}/postgres
+      Description: CrownConnect PostgreSQL administrator credentials
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username":"${DatabaseUsername}"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\\'
+
   MediaBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -60,22 +118,125 @@ Resources:
 
   Database:
     Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
     Properties:
       DBInstanceIdentifier: !Sub crownconnect-${Environment}
       DBInstanceClass: db.t4g.micro
       Engine: postgres
-      EngineVersion: '16.4'
       AllocatedStorage: 20
       StorageType: gp3
       DBName: !Ref DatabaseName
-      MasterUsername: !Ref DatabaseUsername
-      MasterUserPassword: !Ref DatabasePassword
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}'
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
       PubliclyAccessible: false
       BackupRetentionPeriod: 7
       DeletionProtection: true
       StorageEncrypted: true
 
+  ApiExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: CrownConnectMediaAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject, s3:DeleteObject]
+                Resource: !Sub '${MediaBucket.Arn}/seller-media/*'
+
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub crownconnect-${Environment}-api
+      Description: CrownConnect API migration health endpoint
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role: !GetAtt ApiExecutionRole.Arn
+      Timeout: 15
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds: [!Ref ApiSecurityGroup]
+        SubnetIds: [!Ref PrivateSubnetOne, !Ref PrivateSubnetTwo]
+      Environment:
+        Variables:
+          APP_ENV: !Ref Environment
+          MEDIA_BUCKET: !Ref MediaBucket
+          DATABASE_SECRET_ARN: !Ref DatabaseSecret
+          DATABASE_HOST: !GetAtt Database.Endpoint.Address
+          DATABASE_NAME: !Ref DatabaseName
+      Code:
+        ZipFile: |
+          const response = (statusCode, body) => ({
+            statusCode,
+            headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*' },
+            body: JSON.stringify(body),
+          });
+          exports.handler = async (event) => {
+            if (event.requestContext?.http?.method === 'OPTIONS') return response(204, {});
+            if (event.rawPath === '/health') return response(200, { status: 'ok', service: 'crownconnect-api', environment: process.env.APP_ENV });
+            return response(404, { error: 'Not found' });
+          };
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub crownconnect-${Environment}-api
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowHeaders: [content-type, authorization]
+        AllowMethods: [GET, POST, PATCH, DELETE, OPTIONS]
+        AllowOrigins: ['*']
+
+  ApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationMethod: POST
+      IntegrationUri: !Sub
+        - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+        - FunctionArn: !GetAtt ApiFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  HealthRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /health
+      Target: !Sub integrations/${ApiIntegration}
+
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+
+  ApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ApiFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+
 Outputs:
+  ApiUrl:
+    Description: CrownConnect AWS API URL. /health is the initial smoke-test endpoint.
+    Value: !GetAtt HttpApi.ApiEndpoint
   MediaBucketName:
     Value: !Ref MediaBucket
   CognitoUserPoolId:
@@ -84,3 +245,5 @@ Outputs:
     Value: !Ref UserPoolClient
   DatabaseEndpoint:
     Value: !GetAtt Database.Endpoint.Address
+  DatabaseSecretArn:
+    Value: !Ref DatabaseSecret

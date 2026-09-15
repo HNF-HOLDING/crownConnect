@@ -1,12 +1,20 @@
 # CrownConnect AWS migration
 
-This CloudFormation foundation creates the persistent AWS services in `af-south-1`:
+This CloudFormation foundation creates the first deployable AWS service layer in `af-south-1`:
 
 - Amazon RDS PostgreSQL for accounts, salons, bookings, services, and products.
 - Amazon S3 for portfolio photos and videos.
 - Amazon Cognito for customer and seller sign-in.
+- Amazon API Gateway and Lambda. `GET /health` is a safe smoke-test endpoint.
+- A private VPC, database subnets, security groups, and Secrets Manager credentials.
 
-The current application runs as a Cloudflare Worker and uses Cloudflare D1/R2 and ChatGPT sign-in. Its route handlers must be rewritten to use PostgreSQL, S3, and Cognito before an API Gateway/Lambda deployment can be safely created.
+The current application runs as a Cloudflare Worker and uses Cloudflare D1/R2 and ChatGPT sign-in. The live public website stays in place during migration. Its booking, seller, account and upload routes still need to move to the new PostgreSQL/S3/Cognito API before the frontend can point at AWS.
+
+## First deployment
+
+Deploy `template.yaml` in AWS CloudFormation in **Africa (Cape Town)**. The stack creates the AWS foundation and exposes an API URL; open `API_URL/health` and expect a JSON `status: ok` response. The database password is generated in Secrets Manager, never entered in the template or committed to this repository.
+
+This first deployment includes an RDS PostgreSQL instance and therefore has an ongoing AWS cost. It deliberately does **not** switch the public website to AWS yet.
 
 ## Database conversion
 
