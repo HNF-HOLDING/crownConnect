@@ -11,6 +11,16 @@ Parameters:
   DatabaseUsername:
     Type: String
     Default: crownadmin
+  DeployApiPackage:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  ApiPackageKey:
+    Type: String
+    Default: deployments/crownconnect-api.zip
+
+Conditions:
+  UsePackagedApi: !Equals [!Ref DeployApiPackage, 'true']
 
 Resources:
   Network:
@@ -54,6 +64,31 @@ Resources:
     Properties:
       GroupDescription: CrownConnect API Lambda security group
       VpcId: !Ref Network
+
+  SecretsEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow the CrownConnect API to read its database secret
+      VpcId: !Ref Network
+
+  SecretsEndpointIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecretsEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref ApiSecurityGroup
+
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Network
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnetOne, !Ref PrivateSubnetTwo]
+      SecurityGroupIds: [!Ref SecretsEndpointSecurityGroup]
 
   DatabaseIngressFromApi:
     Type: AWS::EC2::SecurityGroupIngress
@@ -156,6 +191,9 @@ Resources:
               - Effect: Allow
                 Action: [s3:GetObject, s3:PutObject, s3:DeleteObject]
                 Resource: !Sub '${MediaBucket.Arn}/seller-media/*'
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref DatabaseSecret
 
   ApiFunction:
     Type: AWS::Lambda::Function
@@ -177,18 +215,16 @@ Resources:
           DATABASE_SECRET_ARN: !Ref DatabaseSecret
           DATABASE_HOST: !GetAtt Database.Endpoint.Address
           DATABASE_NAME: !Ref DatabaseName
-      Code:
-        ZipFile: |
-          const response = (statusCode, body) => ({
-            statusCode,
-            headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*' },
-            body: JSON.stringify(body),
-          });
-          exports.handler = async (event) => {
-            if (event.requestContext?.http?.method === 'OPTIONS') return response(204, {});
-            if (event.rawPath === '/health') return response(200, { status: 'ok', service: 'crownconnect-api', environment: process.env.APP_ENV });
-            return response(404, { error: 'Not found' });
-          };
+      Code: !If
+        - UsePackagedApi
+        - S3Bucket: !Ref MediaBucket
+          S3Key: !Ref ApiPackageKey
+        - ZipFile: |
+            exports.handler = async (event) => ({
+              statusCode: event.rawPath === '/health' ? 200 : 404,
+              headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*' },
+              body: JSON.stringify(event.rawPath === '/health' ? { status: 'ok', service: 'crownconnect-api', environment: process.env.APP_ENV } : { error: 'Not found' }),
+            });
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
@@ -216,6 +252,56 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: GET /health
+      Target: !Sub integrations/${ApiIntegration}
+
+  PublicSellersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /sellers
+      Target: !Sub integrations/${ApiIntegration}
+
+  PublicSellerDetailsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /sellers/{id}
+      Target: !Sub integrations/${ApiIntegration}
+
+  PublicAvailabilityRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /availability
+      Target: !Sub integrations/${ApiIntegration}
+
+  CognitoAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource: ['$request.header.Authorization']
+      JwtConfiguration:
+        Audience: [!Ref UserPoolClient]
+        Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+      Name: !Sub crownconnect-${Environment}-cognito
+
+  AccountRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /account
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+      Target: !Sub integrations/${ApiIntegration}
+
+  BookingRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /bookings
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
       Target: !Sub integrations/${ApiIntegration}
 
   ApiStage:
