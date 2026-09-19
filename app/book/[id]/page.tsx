@@ -1,33 +1,28 @@
-import { notFound } from 'next/navigation';
-import { requireChatGPTUser } from '@/app/chatgpt-auth';
-import { findAccountProfile, findSeller, listSellerMedia } from '@/db/queries';
-import { redirect } from 'next/navigation';
-import { AccountMenu } from '@/app/account-menu';
-import { listSellerServices } from '@/db/queries';
-import { BookingForm } from './booking-form';
+'use client';
 
-export const dynamic = 'force-dynamic';
-function southAfricaToday() { const parts = new Intl.DateTimeFormat('en', { timeZone: 'Africa/Johannesburg', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const value = (name: string) => parts.find((part) => part.type === name)?.value; return `${value('year')}-${value('month')}-${value('day')}`; }
+import Link from 'next/link';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { apiUrl, awsApi, cognitoToken } from '@/app/aws-client';
 
-export default async function BookSeller({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ sent?: string }> }) {
-  const [{ id }, query] = await Promise.all([params, searchParams]);
-  const sellerId = Number(id);
-  if (!Number.isInteger(sellerId) || sellerId < 1) notFound();
-  const user = await requireChatGPTUser(`/book/${sellerId}`);
-  const [seller, account] = await Promise.all([findSeller(sellerId), findAccountProfile(user.userId)]);
-  if (!account) redirect(`/welcome?returnTo=${encodeURIComponent(`/book/${sellerId}`)}`);
-  if (!seller) notFound();
-  const [services, media] = await Promise.all([listSellerServices(seller.id), listSellerMedia(seller.id)]);
-  return (
-    <main className="page-shell">
-      <div className="page-top"><a className="brand" href="/">♛ CrownConnect</a><AccountMenu role={account.primary_role} name={user.fullName ?? user.email} /></div>
-      <div className="panel-grid">
-        <section><p className="eyebrow">BOOK {seller.business_name.toUpperCase()}</p><h1>Request your next appointment.</h1><p>{seller.bio}</p><div className="service-summary"><strong>{seller.featured_service}</strong><p>From R{seller.service_price.toLocaleString('en-ZA')} · {seller.city}</p></div>{media.length > 0 && <section className="customer-portfolio" aria-label={`${seller.business_name} portfolio`}><h2>Recent work</h2><div className="portfolio-grid">{media.map((item) => item.media_type === 'image' ? <img key={item.id} src={`/api/media/${item.id}`} alt={`${seller.business_name} portfolio: ${item.file_name}`} /> : <video key={item.id} controls preload="metadata"><source src={`/api/media/${item.id}`} type={item.content_type} /></video>)}</div></section>}<p className="availability-copy"><strong>Available:</strong> {seller.availability_days.split(',').map((day) => ({ Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' }[day] ?? day)).join(', ')}.</p><p className="muted">This sends a request, not an automatic confirmation. Unavailable or already-requested slots cannot be booked.</p></section>
-        <section className="panel" aria-labelledby="booking-heading">
-          <h2 id="booking-heading">Choose a date and time</h2>
-          {query.sent ? <div className="notice" role="status"><strong>Request sent.</strong><br />{seller.business_name} can now review your booking. Keep their number handy: {seller.phone}.</div> : <BookingForm sellerId={seller.id} availableDays={seller.availability_days.split(',')} services={services} fallbackService={seller.featured_service} fallbackPrice={seller.service_price} defaultName={user.fullName ?? ''} email={user.email} minimumDate={southAfricaToday()} />}
-        </section>
-      </div>
-    </main>
-  );
+type Seller = { id: string; business_name: string; city: string; phone: string; specialty: string; featured_service: string; service_price: number; bio: string; availability_days: string };
+type Service = { id: string; name: string; price: number; duration_minutes: number; description: string };
+type Media = { id: string; media_type: 'image'|'video'; content_type: string; file_name: string; url: string };
+type Details = { seller: Seller; services: Service[]; media: Media[] };
+const slots = ['09:00','11:00','13:00','15:00'];
+function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Johannesburg',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+
+export default function BookSeller(){
+  const params=useParams<{id:string}>(); const id=String(params.id);
+  const [details,setDetails]=useState<Details|null>(null),[date,setDate]=useState(''),[taken,setTaken]=useState<string[]>([]),[loading,setLoading]=useState(true),[sending,setSending]=useState(false),[message,setMessage]=useState(''),[signedIn,setSignedIn]=useState<boolean|null>(null);
+  const days=details?.seller.availability_days.split(',')??[];
+  const weekday=useMemo(()=>date?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(`${date}T12:00:00Z`).getUTCDay()]:'',[date]);
+  const available=!date||days.includes(weekday);
+  useEffect(()=>{fetch(`${apiUrl}/sellers/${id}`).then(async r=>{if(!r.ok)throw new Error('Seller not found');return r.json()}).then(setDetails).catch(e=>setMessage(e.message)).finally(()=>setLoading(false));cognitoToken().then(t=>setSignedIn(Boolean(t))).catch(()=>setSignedIn(false))},[id]);
+  useEffect(()=>{if(!date||!available){setTaken([]);return}fetch(`${apiUrl}/availability?sellerId=${id}&date=${date}`).then(r=>r.json()).then(d=>setTaken(d.takenTimes??[])).catch(()=>setTaken([]))},[id,date,available]);
+  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setMessage('');setSending(true);const form=new FormData(event.currentTarget);const account=await awsApi('/account',{method:'POST',body:JSON.stringify({role:'customer'})});if(!account.ok){const data=await account.json();setMessage(data.error??'Unable to prepare your customer account.');setSending(false);return}const response=await awsApi('/bookings',{method:'POST',body:JSON.stringify({sellerId:Number(id),serviceId:Number(form.get('serviceId'))||undefined,customerName:String(form.get('customerName')??''),customerPhone:String(form.get('customerPhone')??''),appointmentDate:date,appointmentTime:String(form.get('appointmentTime')??''),notes:String(form.get('notes')??'')})});const data=await response.json();setMessage(response.ok?'Booking request sent.':data.error??'Unable to send booking.');setSending(false)}
+  if(loading)return <main className="page-shell"><p>Loading stylist…</p></main>;
+  if(!details)return <main className="page-shell"><p>{message||'Seller not found.'}</p><Link href="/marketplace">Back to marketplace</Link></main>;
+  const {seller,services,media}=details;
+  return <main className="page-shell"><div className="page-top"><Link className="brand" href="/">♛ CrownConnect</Link><Link href="/marketplace">Back to marketplace</Link></div><div className="panel-grid"><section><p className="eyebrow">BOOK {seller.business_name.toUpperCase()}</p><h1>Request your next appointment.</h1><p>{seller.bio}</p><div className="service-summary"><strong>{seller.featured_service}</strong><p>From R{seller.service_price.toLocaleString('en-ZA')} · {seller.city}</p></div>{media.length>0&&<section className="customer-portfolio"><h2>Recent work</h2><div className="portfolio-grid">{media.map(item=>item.media_type==='image'?<img key={item.id} src={item.url} alt={`${seller.business_name}: ${item.file_name}`}/>:<video key={item.id} controls><source src={item.url} type={item.content_type}/></video>)}</div></section>}<p><strong>Available:</strong> {days.join(', ')}.</p></section><section className="panel"><h2>Choose a date and time</h2>{signedIn===false?<div className="notice">Please <Link href="/sign-in">sign in with Cognito</Link> before booking.</div>:<form className="form-grid" onSubmit={submit}><label className="field full">Service<select name="serviceId">{services.length?services.map(s=><option key={s.id} value={s.id}>{s.name} · R{s.price.toLocaleString('en-ZA')} · {s.duration_minutes} min</option>):<option value="">{seller.featured_service}</option>}</select></label><label className="field full">Your name<input name="customerName" required maxLength={80}/></label><label className="field full">WhatsApp or phone<input name="customerPhone" required maxLength={30}/></label><label className="field">Preferred date<input type="date" min={today()} value={date} onChange={e=>setDate(e.target.value)} required/></label><label className="field">Preferred time<select name="appointmentTime" required disabled={!date||!available}><option value="">Choose a time</option>{slots.map(t=><option key={t} value={t} disabled={taken.includes(t)}>{t}{taken.includes(t)?' — requested':''}</option>)}</select></label>{date&&!available&&<p className="availability-warning">This stylist is unavailable on {weekday}.</p>}<label className="field full">Notes<textarea name="notes" maxLength={500}/></label><button className="button" disabled={sending||!date||!available}>{sending?'Sending…':'Send booking request'}</button>{message&&<p role="status">{message}</p>}</form>}</section></div></main>;
 }

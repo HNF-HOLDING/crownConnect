@@ -1,27 +1,6 @@
-import { getChatGPTUser, chatGPTSignInPath } from './chatgpt-auth';
-import { findAccountProfile } from '@/db/queries';
-import { AccountMenu } from './account-menu';
+import Link from 'next/link';
 import { LandingNavLink } from './landing-nav-link';
 
-export const dynamic = 'force-dynamic';
-
-export default async function Home() {
-  const user = await getChatGPTUser();
-  const account = user ? await findAccountProfile(user.userId) : null;
-  const accountHref = account ? '/account' : '/register';
-  return <>
-    <header className="site-header landing-header">
-      <a className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</a>
-      {user ? <AccountMenu role={account?.primary_role} name={user.fullName ?? user.email} /> : <div className="landing-auth"><a className="sign-in-link" href={chatGPTSignInPath('/welcome')}>Sign in</a><a className="button small" href="/register">Create account</a></div>}
-    </header>
-    <main className="landing-page">
-      <section className="landing-hero">
-        <div><p className="eyebrow">SOUTH AFRICA’S HAIR MARKETPLACE</p><h1>Everything for your crown, in one place.</h1><p className="landing-lead">Discover talented local stylists, book your next appointment, and explore the hair looks you love.</p><div className="hero-actions"><LandingNavLink className="button" href="/marketplace">Find a stylist</LandingNavLink><LandingNavLink className="button ghost" href="/products">Browse the marketplace</LandingNavLink></div><p className="trust-copy">Free to explore. Create an account when you’re ready to book or list your services.</p></div>
-        <div className="landing-art" aria-label="CrownConnect beauty marketplace"><div className="art-pill">BRAIDS · WIGS · WEAVES</div><strong>♛</strong><p>YOUR NEXT<br />HAIR DAY</p><span>LOCAL TALENT</span></div>
-      </section>
-      <section id="how-it-works" className="landing-steps" aria-labelledby="steps-heading"><div><p className="eyebrow">HOW IT WORKS</p><h2 id="steps-heading">From inspiration to appointment.</h2></div><div className="step-grid"><article><span>01</span><h3>Explore</h3><p>Browse local stylists and the services they offer.</p></article><article><span>02</span><h3>Create your account</h3><p>Choose Customer Space or Seller Studio in a few taps.</p></article><article><span>03</span><h3>Book with confidence</h3><p>Choose a time and send your booking request directly.</p></article></div></section>
-      <section className="landing-seller"><div><p className="eyebrow">FOR HAIR PROFESSIONALS</p><h2>Put your talent where customers can find it.</h2><p>Build a seller profile, show your services, and manage booking requests in Seller Studio.</p></div><LandingNavLink className="button secondary" href={accountHref}>List your business</LandingNavLink></section>
-    </main>
-    <footer><a className="brand" href="/">♛ CrownConnect</a><p>Hair, care & community.</p><span>South Africa · ZAR</span></footer>
-  </>;
+export default function Home() {
+  return <><header className="site-header landing-header"><Link className="brand" href="/"><span aria-hidden>♛</span> CrownConnect</Link><div className="landing-auth"><Link className="sign-in-link" href="/sign-in">Sign in</Link><Link className="button small" href="/sign-in">Create account</Link></div></header><main className="landing-page"><section className="landing-hero"><div><p className="eyebrow">SOUTH AFRICA’S HAIR MARKETPLACE</p><h1>Everything for your crown, in one place.</h1><p className="landing-lead">Discover talented local stylists, book your next appointment, and explore the hair looks you love.</p><div className="hero-actions"><LandingNavLink className="button" href="/marketplace">Find a stylist</LandingNavLink><LandingNavLink className="button ghost" href="/products">Browse the marketplace</LandingNavLink></div><p className="trust-copy">Free to explore. Create an account when you’re ready to book or list your services.</p></div><div className="landing-art" aria-label="CrownConnect beauty marketplace"><div className="art-pill">BRAIDS · WIGS · WEAVES</div><strong>♛</strong><p>YOUR NEXT<br />HAIR DAY</p><span>LOCAL TALENT</span></div></section><section className="landing-steps"><div><p className="eyebrow">HOW IT WORKS</p><h2>From inspiration to appointment.</h2></div><div className="step-grid"><article><span>01</span><h3>Explore</h3><p>Browse local stylists and services.</p></article><article><span>02</span><h3>Create your account</h3><p>Secure sign-in is powered by AWS Cognito.</p></article><article><span>03</span><h3>Book with confidence</h3><p>Choose a time and send your request.</p></article></div></section><section className="landing-seller"><div><p className="eyebrow">FOR HAIR PROFESSIONALS</p><h2>Put your talent where customers can find it.</h2><p>Build a profile, show your services, and manage bookings in Seller Studio.</p></div><Link className="button secondary" href="/seller">Open Seller Studio</Link></section></main><footer><Link className="brand" href="/">♛ CrownConnect</Link><p>Hair, care & community.</p><span>South Africa · ZAR</span></footer></>;
 }
