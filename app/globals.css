@@ -22,6 +22,9 @@ main, footer { max-width: 1440px; margin: auto; padding-left: 5%; padding-right:
 .landing-page { max-width: 1180px; }
 .landing-header { max-width: none; }
 .landing-auth { display: flex; align-items: center; gap: 18px; }
+.header-actions { display: flex; align-items: center; gap: 14px; }
+.auth-back { margin-bottom: 22px; }
+.auth-back a { color: #792d49; font-weight: 700; text-decoration: none; }
 .sign-in-link { color: #792d49; text-decoration: none; font-size: 14px; font-weight: 700; }
 .landing-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(330px, .9fr); gap: 70px; align-items: center; padding: 76px 0; }
 .landing-hero h1 { max-width: 680px; }
@@ -188,3 +191,4 @@ textarea { min-height: 108px; resize: vertical; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #bb708d; outline-offset: 3px; }
 @media (max-width: 900px) { .grid, .product-category-grid { grid-template-columns: repeat(2, 1fr); } .panel-grid, .landing-hero { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } .landing-hero { gap: 36px; padding: 54px 0; } .landing-art { max-width: 540px; } }
 @media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid, .product-category-grid { grid-template-columns: 1fr; gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: center; flex-direction: row; } .panel { padding: 22px; } .role-intro { margin-top: 48px; } .role-cards { grid-template-columns: 1fr; } .switch-strip, .products-callout { align-items: flex-start; flex-direction: column; } .menu-label { display: none; } .landing-header nav { display: none; } .landing-hero { padding: 42px 0; } .landing-art { min-height: 300px; } .landing-art strong { font-size: 130px; top: 64px; } .landing-art p { font-size: 31px; } .step-grid { grid-template-columns: 1fr; gap: 18px; } .landing-seller { align-items: flex-start; flex-direction: column; padding: 25px; } }
+@media (max-width: 650px) { .site-header nav { overflow-x: auto; gap: 20px; white-space: nowrap; } .header-actions { margin-left: auto; } .header-actions .sign-in-link { display: none; } .register-card { margin-top: 24px; padding: 24px; } }
