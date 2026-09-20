@@ -137,12 +137,18 @@ export default function BookSeller() {
   if (loading)
     return (
       <main className="page-shell">
+        <Link className="brand" href="/">
+          <span aria-hidden>♛</span> CrownConnect
+        </Link>
         <p>Loading stylist…</p>
       </main>
     );
   if (!details)
     return (
       <main className="page-shell">
+        <Link className="brand" href="/">
+          <span aria-hidden>♛</span> CrownConnect
+        </Link>
         <p>{message || 'Seller not found.'}</p>
         <Link href="/marketplace">Back to marketplace</Link>
       </main>

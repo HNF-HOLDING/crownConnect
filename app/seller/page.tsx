@@ -216,6 +216,9 @@ export default function SellerStudio() {
   if (!studio)
     return (
       <main className="page-shell">
+        <Link className="brand" href="/">
+          <span aria-hidden>♛</span> CrownConnect
+        </Link>
         <p>Loading Seller Studio…</p>
         {error && <p className="notice">{error}</p>}
       </main>

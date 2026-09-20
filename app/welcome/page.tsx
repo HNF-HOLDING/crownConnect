@@ -1,14 +1,11 @@
 'use client';
 import { useEffect } from 'react';
+import { RedirectScreen } from '../redirect-screen';
 
 export default function Welcome() {
   useEffect(() => {
     window.location.replace('/marketplace');
   }, []);
 
-  return (
-    <main className="register-page">
-      <p>Opening your CrownConnect discovery page…</p>
-    </main>
-  );
+  return <RedirectScreen message="Opening your CrownConnect discovery page…" />;
 }

@@ -1,12 +1,9 @@
 'use client';
 import { useEffect } from 'react';
+import { RedirectScreen } from '../redirect-screen';
 export default function Register() {
   useEffect(() => {
     window.location.replace('/sign-in?mode=signup');
   }, []);
-  return (
-    <main className="register-page">
-      <p>Opening secure account creation…</p>
-    </main>
-  );
+  return <RedirectScreen message="Opening secure account creation…" />;
 }

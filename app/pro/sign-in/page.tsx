@@ -1,12 +1,9 @@
 'use client';
 import { useEffect } from 'react';
+import { RedirectScreen } from '../../redirect-screen';
 export default function ProSignIn() {
   useEffect(() => {
     window.location.replace('/sign-in?portal=pro&next=/pro/dashboard');
   }, []);
-  return (
-    <main className="page-shell">
-      <p>Opening Pro sign in…</p>
-    </main>
-  );
+  return <RedirectScreen message="Opening Pro sign in…" />;
 }

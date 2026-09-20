@@ -82,6 +82,9 @@ export default function AccountPage() {
   if (loading)
     return (
       <main className="register-page">
+        <Link className="brand" href="/">
+          <span aria-hidden>♛</span> CrownConnect
+        </Link>
         <p>Loading your secure account…</p>
       </main>
     );
