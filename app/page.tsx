@@ -1,22 +1,11 @@
 import Link from 'next/link';
 import { LandingNavLink } from './landing-nav-link';
+import { SiteHeader } from './site-header';
 
 export default function Home() {
   return (
     <>
-      <header className="site-header landing-header">
-        <Link className="brand" href="/">
-          <span aria-hidden>♛</span> CrownConnect
-        </Link>
-        <div className="landing-auth">
-          <Link className="sign-in-link" href="/sign-in">
-            Sign in
-          </Link>
-          <Link className="button small" href="/sign-in?mode=signup">
-            Create account
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
       <main className="landing-page">
         <section className="landing-hero">
           <div>
