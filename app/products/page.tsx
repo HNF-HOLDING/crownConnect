@@ -29,8 +29,11 @@ export default function ProductsPage() {
       <main className="products-page">
         <section className="products-intro">
           <p className="eyebrow">HAIR PRODUCTS</p>
-          <h1>Shop your hair essentials.</h1>
-          <p>Product sellers will appear here as they join CrownConnect.</p>
+          <h1>Shop the essentials your hair routine needs.</h1>
+          <p>
+            Explore the products customers look for most, from protective styles
+            to everyday haircare and finishing essentials.
+          </p>
         </section>
         <section className="product-category-grid">
           {categories.map((category) => (
@@ -51,9 +54,14 @@ export default function ProductsPage() {
             <p className="eyebrow">LOOKING FOR A SERVICE?</p>
             <h2>Book the right stylist for your look.</h2>
           </div>
-          <Link className="button" href="/marketplace">
-            Find a stylist
-          </Link>
+          <div className="products-actions">
+            <Link className="button" href="/marketplace">
+              Book a stylist
+            </Link>
+            <Link className="button secondary" href="/sign-in?mode=signup">
+              Become a seller
+            </Link>
+          </div>
         </section>
       </main>
     </>

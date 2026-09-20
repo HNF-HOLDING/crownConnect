@@ -32,6 +32,7 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true),
     [saving, setSaving] = useState(false),
     [message, setMessage] = useState('');
+  const isSeller = account?.primary_role === 'seller';
   useEffect(() => {
     void (async () => {
       if (!(await cognitoToken())) {
@@ -103,6 +104,27 @@ export default function AccountPage() {
           We only ask for details needed to manage bookings and help you find
           services. Your email comes from your verified Cognito identity.
         </p>
+        {account && (
+          <div className="seller-onboarding-callout" role="status">
+            {isSeller ? (
+              <>
+                <strong>You’re ready for Seller Studio.</strong>
+                <span>
+                  Add services, upload your portfolio, and manage bookings from
+                  one place.
+                </span>
+              </>
+            ) : (
+              <>
+                <strong>Customer mode is active.</strong>
+                <span>
+                  Browse stylists, compare services, and manage your booking
+                  requests in one place.
+                </span>
+              </>
+            )}
+          </div>
+        )}
         <form className="registration-form" onSubmit={save}>
           <fieldset>
             <legend>How will you mainly use CrownConnect?</legend>
@@ -224,11 +246,11 @@ export default function AccountPage() {
           <div className="customer-actions">
             <Link
               className="button"
-              href={
-                account.primary_role === 'seller' ? '/seller' : '/marketplace'
-              }
+              href={account.primary_role === 'seller' ? '/seller' : '/marketplace'}
             >
-              Open my space
+              {account.primary_role === 'seller'
+                ? 'Continue to Seller Studio'
+                : 'Open my space'}
             </Link>
             <Link className="button ghost" href="/my-bookings">
               My bookings

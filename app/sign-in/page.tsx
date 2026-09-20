@@ -115,6 +115,13 @@ export default function SignInPage() {
               collect only the profile details needed for bookings.
             </p>
           )}
+          {!verification && (
+            <ul className="trust-points" aria-label="Benefits of joining CrownConnect">
+              <li>Secure AWS account access</li>
+              <li>Book local services in minutes</li>
+              <li>Manage your profile or bookings</li>
+            </ul>
+          )}
           <form className="registration-form" onSubmit={submit}>
             {!verification && mode === 'signup' && (
               <label>
@@ -213,6 +220,7 @@ export default function SignInPage() {
           {!verification && (
             <div className="auth-switches">
               <button
+                type="button"
                 className="text-button"
                 onClick={() => {
                   setMode(mode === 'signup' ? 'signin' : 'signup');
@@ -225,6 +233,7 @@ export default function SignInPage() {
               </button>
               {mode !== 'signup' && (
                 <button
+                  type="button"
                   className="text-button"
                   onClick={() => {
                     setMode(mode === 'reset' ? 'signin' : 'reset');

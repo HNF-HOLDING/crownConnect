@@ -18,7 +18,7 @@ export function SiteHeader() {
       </Link>
       <nav aria-label="Main navigation">
         <Link href="/">Home</Link>
-        <Link href="/marketplace">Find a stylist</Link>
+        <Link href="/marketplace">Marketplace</Link>
         <Link href="/products">Hair products</Link>
       </nav>
       <div className="header-actions">

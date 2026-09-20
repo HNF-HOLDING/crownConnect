@@ -12,16 +12,21 @@ export default function Home() {
             <p className="eyebrow">SOUTH AFRICA’S HAIR MARKETPLACE</p>
             <h1>Everything for your crown, in one place.</h1>
             <p className="landing-lead">
-              Discover talented local stylists, book your next appointment, and
-              explore the hair looks you love.
+              Discover trusted local stylists, compare services, and book the
+              look you’ve been waiting for.
             </p>
             <div className="hero-actions">
               <LandingNavLink className="button" href="/marketplace">
-                Find a stylist
+                Book a stylist
               </LandingNavLink>
               <LandingNavLink className="button ghost" href="/products">
-                Browse the marketplace
+                Explore hair products
               </LandingNavLink>
+            </div>
+            <div className="hero-badges" aria-label="CrownConnect trust highlights">
+              <span>★ 4.9 client rating</span>
+              <span>Verified local stylists</span>
+              <span>Secure booking</span>
             </div>
             <p className="trust-copy">
               Free to explore. Create an account when you’re ready to book or
