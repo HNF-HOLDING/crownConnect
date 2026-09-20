@@ -27,9 +27,19 @@ export default function SignInPage() {
     [step, setStep] = useState<'form' | 'signup-code' | 'reset-code'>('form'),
     [message, setMessage] = useState(''),
     [busy, setBusy] = useState(false);
+  const [portal, setPortal] = useState<
+    'customer' | 'pro' | 'admin' | 'general'
+  >('general');
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('mode') === 'signup')
-      setMode('signup');
+    const parameters = new URLSearchParams(window.location.search);
+    if (parameters.get('mode') === 'signup') setMode('signup');
+    const requestedPortal = parameters.get('portal');
+    if (
+      requestedPortal === 'customer' ||
+      requestedPortal === 'pro' ||
+      requestedPortal === 'admin'
+    )
+      setPortal(requestedPortal);
   }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,7 +114,11 @@ export default function SignInPage() {
                   ? 'CREATE ACCOUNT'
                   : mode === 'reset'
                     ? 'ACCOUNT RECOVERY'
-                    : 'WELCOME BACK'}
+                    : portal === 'pro'
+                      ? 'CROWNCONNECT PRO'
+                      : portal === 'admin'
+                        ? 'STAFF ACCESS'
+                        : 'WELCOME BACK'}
           </p>
           <h1>
             {verification
@@ -113,7 +127,11 @@ export default function SignInPage() {
                 ? 'Join CrownConnect'
                 : mode === 'reset'
                   ? 'Reset your password'
-                  : 'Sign in'}
+                  : portal === 'pro'
+                    ? 'Sign in to Pro'
+                    : portal === 'admin'
+                      ? 'Administrator sign in'
+                      : 'Sign in'}
           </h1>
           {mode === 'signup' && !verification && (
             <p>
@@ -122,10 +140,16 @@ export default function SignInPage() {
             </p>
           )}
           {!verification && (
-            <ul className="trust-points" aria-label="Benefits of joining CrownConnect">
+            <ul className="trust-points" aria-label="Benefits of CrownConnect">
               <li>Secure AWS account access</li>
               <li>Book local services in minutes</li>
-              <li>Manage your profile or bookings</li>
+              <li>
+                {portal === 'pro'
+                  ? 'Manage services and booking requests'
+                  : portal === 'admin'
+                    ? 'Restricted to authorised staff accounts'
+                    : 'Manage your profile or bookings'}
+              </li>
             </ul>
           )}
           <form className="registration-form" onSubmit={submit}>
@@ -223,7 +247,7 @@ export default function SignInPage() {
               {message}
             </p>
           )}
-          {!verification && (
+          {!verification && portal !== 'admin' && (
             <div className="auth-switches">
               <button
                 type="button"

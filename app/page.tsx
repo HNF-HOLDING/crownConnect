@@ -7,6 +7,30 @@ export default function Home() {
     <>
       <SiteHeader />
       <main className="landing-page">
+        <section className="audience-choice" aria-labelledby="choose-space">
+          <div>
+            <p className="eyebrow">CHOOSE YOUR CROWNCONNECT</p>
+            <h1 id="choose-space">What would you like to do?</h1>
+            <p>
+              Customers and beauty professionals now have separate, focused
+              experiences.
+            </p>
+          </div>
+          <div className="audience-grid">
+            <Link className="audience-card customer" href="/customer">
+              <span>01 · CUSTOMER</span>
+              <h2>Book a beauty service</h2>
+              <p>Discover professionals and manage your appointments.</p>
+              <strong>Open CrownConnect →</strong>
+            </Link>
+            <Link className="audience-card pro" href="/pro">
+              <span>02 · PROFESSIONAL</span>
+              <h2>Grow your business</h2>
+              <p>Apply to join, showcase your work and manage requests.</p>
+              <strong>Open CrownConnect Pro →</strong>
+            </Link>
+          </div>
+        </section>
         <section className="landing-hero">
           <div>
             <p className="eyebrow">SOUTH AFRICA’S HAIR MARKETPLACE</p>
@@ -23,7 +47,10 @@ export default function Home() {
                 Explore hair products
               </LandingNavLink>
             </div>
-            <div className="hero-badges" aria-label="CrownConnect trust highlights">
+            <div
+              className="hero-badges"
+              aria-label="CrownConnect trust highlights"
+            >
               <span>★ 4.9 client rating</span>
               <span>Verified local stylists</span>
               <span>Secure booking</span>
@@ -79,8 +106,8 @@ export default function Home() {
               Studio.
             </p>
           </div>
-          <Link className="button secondary" href="/seller">
-            Open Seller Studio
+          <Link className="button secondary" href="/pro">
+            Explore CrownConnect Pro
           </Link>
         </section>
       </main>

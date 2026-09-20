@@ -1,10 +1,15 @@
-"use client";
+'use client';
 
 import { Amplify } from 'aws-amplify';
 
-export const apiUrl = process.env.NEXT_PUBLIC_CROWCONNECT_API_URL ?? 'https://t4rexmr9zk.execute-api.af-south-1.amazonaws.com';
-const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? 'af-south-1_BtHsQHwj3';
-const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID ?? '15gofegp1qm23upgot25ck16bv';
+export const apiUrl =
+  process.env.NEXT_PUBLIC_CROWCONNECT_API_URL ??
+  'https://t4rexmr9zk.execute-api.af-south-1.amazonaws.com';
+const userPoolId =
+  process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? 'af-south-1_BtHsQHwj3';
+const userPoolClientId =
+  process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID ??
+  '15gofegp1qm23upgot25ck16bv';
 const awsRegion = process.env.NEXT_PUBLIC_AWS_REGION ?? 'af-south-1';
 
 // Configure Amplify Auth with the expected shape so helpers like fetchAuthSession work
@@ -16,7 +21,11 @@ const authConfig: any = {
   region: awsRegion,
 };
 // Provide minimal `loginWith` defaults to avoid undefined access in the library
-authConfig.Cognito.loginWith = authConfig.Cognito.loginWith ?? { username: true, email: false, phone: false };
+authConfig.Cognito.loginWith = authConfig.Cognito.loginWith ?? {
+  username: true,
+  email: false,
+  phone: false,
+};
 Amplify.configure({ Auth: authConfig });
 
 // Dynamically load auth helpers after Amplify is configured to avoid
@@ -53,6 +62,12 @@ export async function signUp(input: any) {
 export async function cognitoToken() {
   const session = await fetchAuthSession();
   return session?.tokens?.idToken ?? null;
+}
+
+export async function cognitoGroups() {
+  const token = await cognitoToken();
+  const groups = token?.payload?.['cognito:groups'];
+  return Array.isArray(groups) ? groups.map(String) : [];
 }
 
 export async function awsApi(path: string, init: RequestInit = {}) {

@@ -18,8 +18,8 @@ export function SiteHeader() {
       </Link>
       <nav aria-label="Main navigation">
         <Link href="/">Home</Link>
-        <Link href="/marketplace">Marketplace</Link>
-        <Link href="/products">Hair products</Link>
+        <Link href="/customer">Customer</Link>
+        <Link href="/pro">For professionals</Link>
       </nav>
       <div className="header-actions">
         {signedIn ? (

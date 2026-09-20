@@ -33,6 +33,10 @@ export default function AccountPage() {
     [saving, setSaving] = useState(false),
     [message, setMessage] = useState('');
   const isSeller = account?.primary_role === 'seller';
+  const requestedRole =
+    typeof window === 'undefined'
+      ? null
+      : new URLSearchParams(window.location.search).get('role');
   useEffect(() => {
     void (async () => {
       if (!(await cognitoToken())) {
@@ -133,7 +137,11 @@ export default function AccountPage() {
                 type="radio"
                 name="role"
                 value="customer"
-                defaultChecked={!account || account.primary_role === 'customer'}
+                defaultChecked={
+                  account
+                    ? account.primary_role === 'customer'
+                    : requestedRole !== 'seller'
+                }
               />
               <span>
                 <strong>Customer</strong>
@@ -145,7 +153,11 @@ export default function AccountPage() {
                 type="radio"
                 name="role"
                 value="seller"
-                defaultChecked={account?.primary_role === 'seller'}
+                defaultChecked={
+                  account
+                    ? account.primary_role === 'seller'
+                    : requestedRole === 'seller'
+                }
               />
               <span>
                 <strong>Service provider</strong>
@@ -246,11 +258,15 @@ export default function AccountPage() {
           <div className="customer-actions">
             <Link
               className="button"
-              href={account.primary_role === 'seller' ? '/seller' : '/marketplace'}
+              href={
+                account.primary_role === 'seller'
+                  ? '/pro/dashboard'
+                  : '/customer'
+              }
             >
               {account.primary_role === 'seller'
-                ? 'Continue to Seller Studio'
-                : 'Open my space'}
+                ? 'Continue to CrownConnect Pro'
+                : 'Open Customer space'}
             </Link>
             <Link className="button ghost" href="/my-bookings">
               My bookings

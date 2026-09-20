@@ -211,3 +211,30 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 900px) { .grid, .product-category-grid { grid-template-columns: repeat(2, 1fr); } .panel-grid, .landing-hero { grid-template-columns: 1fr; } .hero-note { padding-right: 0; } .market-filters { grid-template-columns: repeat(2, 1fr); } .landing-hero { gap: 36px; padding: 54px 0; } .landing-art { max-width: 540px; } }
 @media (max-width: 650px) { .site-header { flex-wrap: wrap; } .site-header nav { order: 3; width: 100%; padding-top: 14px; border-top: 1px solid #eee; } .brand { font-size: 21px; } .hero { padding-top: 34px; } .hero-note { display: none; } .market-filters { grid-template-columns: 1fr; } .market-filters .button { width: 100%; } .grid, .product-category-grid { grid-template-columns: 1fr; gap: 20px 12px; } .photo, .service-art { height: 220px; } .card-footer { align-items: flex-start; flex-direction: column; } .section-heading { align-items: flex-start; flex-direction: column; } footer { flex-wrap: wrap; gap: 12px; } footer p { display: none; } .form-grid { grid-template-columns: 1fr; } .field.full, .form-actions { grid-column: 1; } .form-actions { align-items: flex-start; flex-direction: column; } .page-top { align-items: center; flex-direction: row; } .panel { padding: 22px; } .role-intro { margin-top: 48px; } .role-cards { grid-template-columns: 1fr; } .switch-strip, .products-callout { align-items: flex-start; flex-direction: column; } .menu-label { display: none; } .landing-header nav { display: none; } .landing-hero { padding: 42px 0; } .landing-art { min-height: 300px; } .landing-art strong { font-size: 130px; top: 64px; } .landing-art p { font-size: 31px; } .step-grid { grid-template-columns: 1fr; gap: 18px; } .landing-seller { align-items: flex-start; flex-direction: column; padding: 25px; } }
 @media (max-width: 650px) { .site-header nav { overflow-x: auto; gap: 20px; white-space: nowrap; } .header-actions { margin-left: auto; } .header-actions .sign-in-link { display: none; } .register-card { margin-top: 24px; padding: 24px; } }
+.audience-choice { padding: 64px 0 18px; }
+.audience-choice > div:first-child { max-width: 690px; }
+.audience-choice > div:first-child > p:last-child { color: #6f5b66; font-size: 18px; }
+.audience-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 30px; }
+.audience-card { min-height: 270px; border-radius: 18px; padding: 30px; text-decoration: none; display: flex; flex-direction: column; box-shadow: 0 14px 40px #4b203412; transition: transform .16s ease; }
+.audience-card:hover { transform: translateY(-4px); }
+.audience-card.customer { background: #fff; border: 1px solid #e4d7dc; }
+.audience-card.pro { background: linear-gradient(145deg, #542039, #862f51); color: white; }
+.audience-card > span { font-size: 12px; letter-spacing: 1.5px; font-weight: 700; }
+.audience-card h2 { font-size: 32px; }
+.audience-card p { line-height: 1.6; opacity: .82; }
+.audience-card strong { margin-top: auto; }
+.portal-page { max-width: 1180px; min-height: calc(100vh - 94px); padding-top: 64px; padding-bottom: 70px; }
+.portal-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); gap: 56px; align-items: center; }
+.portal-hero > div:first-child > p:not(.eyebrow) { max-width: 650px; color: #6f5b66; font-size: 18px; line-height: 1.7; }
+.portal-card { padding: 34px; border: 1px solid #e4d7dc; border-radius: 18px; background: #fff; box-shadow: 0 18px 50px #4b203414; }
+.portal-card.dark { color: white; border: 0; background: linear-gradient(145deg, #542039, #862f51); }
+.portal-card > span { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.portal-card ul { padding-left: 20px; line-height: 2; }
+.admin-page { max-width: 980px; }
+.access-denied { max-width: 680px; border: 1px solid #e4d7dc; border-radius: 18px; padding: 36px; background: #fff; }
+.access-denied p:not(.eyebrow) { color: #6f5b66; line-height: 1.7; }
+.admin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.admin-grid article { padding: 24px; border: 1px solid #e4d7dc; border-radius: 14px; display: grid; gap: 10px; }
+.admin-grid span { color: #6f5b66; line-height: 1.5; }
+@media (max-width: 900px) { .portal-hero { grid-template-columns: 1fr; } }
+@media (max-width: 650px) { .audience-grid, .admin-grid { grid-template-columns: 1fr; } .audience-choice { padding-top: 38px; } .audience-card { min-height: 235px; padding: 24px; } }

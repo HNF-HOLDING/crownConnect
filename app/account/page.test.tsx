@@ -32,7 +32,7 @@ describe('AccountPage', () => {
     });
 
     expect(
-      screen.getByRole('link', { name: /continue to seller studio/i }),
-    ).toHaveAttribute('href', '/seller');
+      screen.getByRole('link', { name: /continue to crownconnect pro/i }),
+    ).toHaveAttribute('href', '/pro/dashboard');
   });
 });
