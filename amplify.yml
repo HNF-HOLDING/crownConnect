@@ -4,7 +4,7 @@ frontend:
     preBuild:
       commands:
         - corepack enable
-        - if [ -x "$(command -v pnpm)" ]; then echo "pnpm present: $(pnpm -v)"; else npm install -g pnpm@latest || true; fi
+        - 'if [ -x "$(command -v pnpm)" ]; then echo "pnpm present: $(pnpm -v)"; else npm install -g pnpm@latest || true; fi'
         - corepack prepare pnpm@latest --activate
         - pnpm install --frozen-lockfile
     build:
