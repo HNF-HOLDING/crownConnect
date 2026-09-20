@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { cognitoToken } from '../aws-client';
 import { PortalHeader } from '../portal-header';
+import { nearbyStylistsMap } from '../google-maps';
 
 export default function CustomerPortal() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -28,6 +29,14 @@ export default function CustomerPortal() {
               <Link className="button" href="/marketplace">
                 Find a stylist
               </Link>
+              <a
+                className="button ghost"
+                href={nearbyStylistsMap}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Explore on Google Maps
+              </a>
               {signedIn ? (
                 <Link className="button ghost" href="/my-bookings">
                   View my bookings

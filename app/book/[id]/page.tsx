@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiUrl, awsApi, cognitoToken } from '@/app/aws-client';
+import { googleMapsDirections, googleMapsSearch } from '@/app/google-maps';
 
 type Seller = {
   id: string;
@@ -197,6 +198,28 @@ export default function BookSeller() {
           <p>
             <strong>Available:</strong> {days.join(', ')}.
           </p>
+          <div className="map-actions">
+            <a
+              className="button ghost small"
+              href={googleMapsSearch(
+                `${seller.business_name}, ${seller.city}, South Africa`,
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View area on Google Maps
+            </a>
+            <a
+              className="maps-link"
+              href={googleMapsDirections(
+                `${seller.business_name}, ${seller.city}, South Africa`,
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Get directions ↗
+            </a>
+          </div>
         </section>
         <section className="panel">
           <h2>Choose a date and time</h2>

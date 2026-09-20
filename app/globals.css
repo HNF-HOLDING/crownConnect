@@ -241,3 +241,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .redirect-screen { max-width: 760px; min-height: 100vh; padding-top: 42px; }
 .redirect-card { min-height: 280px; margin-top: 54px; border: 1px solid #e4d7dc; border-radius: 18px; display: grid; place-items: center; align-content: center; gap: 12px; color: #6f5b66; background: #fff; }
 .redirect-crown { color: #792d49; font-family: Georgia, serif; font-size: 64px; line-height: 1; }
+.maps-link { color: #792d49; font-weight: 700; text-decoration: none; }
+.maps-link:hover { text-decoration: underline; }
+.marketplace-intro .maps-link { display: inline-block; margin: 4px 0 22px; }
+.card-map-link { display: inline-block; margin-top: 3px; font-size: 13px; }
+.map-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 18px; }

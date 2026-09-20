@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiUrl } from '../aws-client';
+import { googleMapsSearch, nearbyStylistsMap } from '../google-maps';
 
 type Seller = {
   id: string;
@@ -53,8 +54,8 @@ export function AwsMarketplace() {
         <div className="marketplace-empty-state" role="status">
           <h2>No stylists available yet</h2>
           <p>
-            The marketplace is still being populated. Sign up as a seller to join
-            the next wave of local talent.
+            The marketplace is still being populated. Sign up as a seller to
+            join the next wave of local talent.
           </p>
           <Link className="button" href="/sign-in?mode=signup">
             Become a seller
@@ -70,6 +71,14 @@ export function AwsMarketplace() {
         <p className="eyebrow">BOOK LOCAL TALENT</p>
         <h1>A stylist for your style.</h1>
         <p>Discover professionals using the CrownConnect AWS marketplace.</p>
+        <a
+          className="maps-link"
+          href={nearbyStylistsMap}
+          target="_blank"
+          rel="noreferrer"
+        >
+          ⌖ Explore nearby on Google Maps ↗
+        </a>
       </section>
 
       <p className="market-count">
@@ -89,7 +98,9 @@ export function AwsMarketplace() {
             </div>
             <div className="trust-row">
               <span className="local-trust-pill">Verified local stylist</span>
-              <span className="distance-pill">Within {defaultDistanceKm} km</span>
+              <span className="distance-pill">
+                Within {defaultDistanceKm} km
+              </span>
             </div>
             <p className="badge">{seller.specialty}</p>
             <h3>{seller.featured_service}</h3>
@@ -98,13 +109,25 @@ export function AwsMarketplace() {
               <span>⌖ {seller.city}</span>
               <span className="service-area">Local service area</span>
             </div>
+            <a
+              className="maps-link card-map-link"
+              href={googleMapsSearch(
+                `${seller.business_name}, ${seller.city}, South Africa`,
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View area on Google Maps ↗
+            </a>
             <div className="mini-tags">
               <span>{seller.specialty}</span>
               <span>Local talent</span>
             </div>
             <p className="card-bio">{seller.bio}</p>
             <div className="card-footer">
-              <strong>From R{seller.service_price.toLocaleString('en-ZA')}</strong>
+              <strong>
+                From R{seller.service_price.toLocaleString('en-ZA')}
+              </strong>
               <Link href={`/book/${seller.id}`}>View &amp; request ↗</Link>
             </div>
           </article>
@@ -113,4 +136,3 @@ export function AwsMarketplace() {
     </main>
   );
 }
-
