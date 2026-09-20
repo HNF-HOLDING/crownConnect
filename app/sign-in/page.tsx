@@ -12,6 +12,11 @@ import {
 import { SiteHeader } from '../site-header';
 
 type Mode = 'signin' | 'signup' | 'reset';
+
+export function getPostAuthDestination(nextParam?: string | null) {
+  return nextParam?.startsWith('/') ? nextParam : '/marketplace';
+}
+
 export default function SignInPage() {
   const [mode, setMode] = useState<Mode>('signin'),
     [email, setEmail] = useState(''),
@@ -70,7 +75,8 @@ export default function SignInPage() {
       } else {
         await signIn({ username: email, password });
         const next = new URLSearchParams(window.location.search).get('next');
-        window.location.assign(next?.startsWith('/') ? next : '/account');
+        const destination = getPostAuthDestination(next);
+        window.location.assign(destination);
       }
     } catch (cause) {
       setMessage(
