@@ -3,7 +3,9 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install -g pnpm@12.4.2 --force
+        - corepack enable
+        - if [ -x "$(command -v pnpm)" ]; then echo "pnpm present: $(pnpm -v)"; else npm install -g pnpm@latest || true; fi
+        - corepack prepare pnpm@latest --activate
         - pnpm install --frozen-lockfile
     build:
       commands:
