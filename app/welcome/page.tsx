@@ -1,5 +1,3 @@
 'use client';
-import Link from 'next/link';
-import { useState } from 'react';
-import { awsApi } from '../aws-client';
-export default function Welcome() { const [error, setError] = useState(''); async function choose(role: 'customer' | 'seller') { const response = await awsApi('/account', { method: 'POST', body: JSON.stringify({ role }) }); const data = await response.json(); if (!response.ok) { setError(data.error || 'Unable to save your choice.'); return; } window.location.href = role === 'seller' ? '/seller' : '/marketplace'; } return <main className="role-page"><Link className="brand" href="/">♛ CrownConnect</Link><div className="role-intro"><p className="eyebrow">WELCOME TO CROWNCONNECT</p><h1>How will you use CrownConnect?</h1><p>You can use both spaces and change your main role later.</p></div>{error && <p className="notice">{error}</p>}<div className="role-cards"><button className="role-card" onClick={() => void choose('customer')}><span className="role-icon">✦</span><strong>I’m looking for a service</strong><span>Customer Space</span></button><button className="role-card" onClick={() => void choose('seller')}><span className="role-icon">♛</span><strong>I provide services</strong><span>Seller Studio</span></button></div></main>; }
+import { useEffect } from 'react';
+export default function Welcome() { useEffect(() => { window.location.replace('/account'); }, []); return <main className="register-page"><p>Opening account setup…</p></main>; }

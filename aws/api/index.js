@@ -8,7 +8,7 @@ let schemaReady;
 const s3 = new S3Client({});
 const json = (statusCode, body, origin) => ({
   statusCode,
-  headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': origin || process.env.FRONTEND_ORIGIN || '*', 'access-control-allow-headers': 'content-type,authorization', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS' },
+  headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': origin === process.env.FRONTEND_ORIGIN ? origin : process.env.FRONTEND_ORIGIN, 'access-control-allow-headers': 'content-type,authorization', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS' },
   body: JSON.stringify(body),
 });
 const error = (statusCode, message) => json(statusCode, { error: message });

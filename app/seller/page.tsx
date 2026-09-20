@@ -24,6 +24,8 @@ export default function SellerStudio() {
   const load = useCallback(async () => {
     try {
       if (!(await cognitoToken())) { window.location.href = '/sign-in?next=/seller'; return; }
+      const accountResponse = await awsApi('/account'), accountData = await accountResponse.json();
+      if (!accountResponse.ok || !accountData.account?.terms_accepted || !accountData.account?.phone) { window.location.href = '/account'; return; }
       setStudio(await read(await awsApi('/seller')));
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to load Seller Studio.'); }
   }, []);
@@ -52,6 +54,8 @@ export default function SellerStudio() {
     const file = new FormData(event.currentTarget).get('media');
     try {
       if (!(file instanceof File) || !file.size) throw new Error('Choose a photo or video first.');
+      const maximum = file.type.startsWith('video/') ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maximum) throw new Error(`That ${file.type.startsWith('video/') ? 'video' : 'image'} is too large.`);
       const created = await read(await awsApi('/media/upload-url', { method: 'POST', body: JSON.stringify({ fileName: file.name, contentType: file.type }) }));
       const response = await fetch(created.uploadUrl, { method: 'PUT', headers: { 'content-type': file.type }, body: file });
       if (!response.ok) throw new Error('The upload to AWS S3 failed.');

@@ -124,6 +124,9 @@ footer { display: flex; align-items: center; justify-content: space-between; bor
 .register-card { margin-top: 74px; border: 1px solid #e4d7dc; border-radius: 16px; padding: 34px; background: white; box-shadow: 0 10px 34px #4b203409; }
 .register-card > p:not(.eyebrow) { color: #6f5b66; line-height: 1.6; font-size: 17px; }
 .registration-form { display: grid; gap: 18px; margin-top: 28px; }
+.password-help { margin: -8px 0 0; color: #6f5b66; font-size: 13px; }
+.auth-switches { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.text-button { border: 0; padding: 0; background: transparent; color: #792d49; font-weight: 700; cursor: pointer; text-decoration: underline; }
 .registration-form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
 .registration-form legend { font-size: 14px; font-weight: 700; margin-bottom: 9px; }
 .registration-choice { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 16px; border: 1px solid #dfd0d6; border-radius: 11px; cursor: pointer; }

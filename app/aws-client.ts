@@ -21,33 +21,33 @@ Amplify.configure({ Auth: authConfig });
 
 // Dynamically load auth helpers after Amplify is configured to avoid
 // the auth package executing configuration-time code on static import.
-export async function confirmResetPassword(...args: any[]) {
+export async function confirmResetPassword(input: any) {
   const mod = await import('@aws-amplify/auth');
-  return mod.confirmResetPassword(...args);
+  return mod.confirmResetPassword(input);
 }
-export async function confirmSignUp(...args: any[]) {
+export async function confirmSignUp(input: any) {
   const mod = await import('@aws-amplify/auth');
-  return mod.confirmSignUp(...args);
+  return mod.confirmSignUp(input);
 }
-export async function fetchAuthSession(...args: any[]) {
+export async function fetchAuthSession(options?: any) {
   const mod = await import('@aws-amplify/auth');
-  return mod.fetchAuthSession(...args);
+  return mod.fetchAuthSession(options);
 }
-export async function resetPassword(...args: any[]) {
+export async function resetPassword(input: any) {
   const mod = await import('@aws-amplify/auth');
-  return mod.resetPassword(...args);
+  return mod.resetPassword(input);
 }
-export async function signIn(...args: any[]) {
+export async function signIn(input: any) {
   const mod = await import('@aws-amplify/auth');
-  return mod.signIn(...args);
+  return mod.signIn(input);
 }
-export async function signOut(...args: any[]) {
+export async function signOut(input?: any) {
   const mod = await import('@aws-amplify/auth');
-  return mod.signOut(...args);
+  return mod.signOut(input);
 }
-export async function signUp(...args: any[]) {
+export async function signUp(input: any) {
   const mod = await import('@aws-amplify/auth');
-  return mod.signUp(...args);
+  return mod.signUp(input);
 }
 
 export async function cognitoToken() {
