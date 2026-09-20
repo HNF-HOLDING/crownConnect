@@ -1,7 +1,6 @@
-'use client';
+"use client";
 
-import { Amplify } from 'aws-amplify';
-import { confirmResetPassword, confirmSignUp, fetchAuthSession, resetPassword, signIn, signOut, signUp } from 'aws-amplify/auth';
+import Amplify, { Auth } from 'aws-amplify';
 
 export const apiUrl = process.env.NEXT_PUBLIC_CROWCONNECT_API_URL ?? 'https://t4rexmr9zk.execute-api.af-south-1.amazonaws.com';
 const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? 'af-south-1_BtHsQHwj3';
@@ -17,11 +16,32 @@ Amplify.configure({
   },
 });
 
-export { confirmResetPassword, confirmSignUp, resetPassword, signIn, signOut, signUp };
+// Export simple wrappers around Amplify Auth so UI code can call the same helpers
+export async function signIn(username: string, password: string) { return Auth.signIn(username, password); }
+export async function signOut() { return Auth.signOut(); }
+export async function signUp(options: any) { return Auth.signUp(options); }
+export async function confirmSignUp(username: string, code: string) { return Auth.confirmSignUp(username, code); }
+export async function resetPassword(username: string) { return Auth.forgotPassword(username); }
+export async function confirmResetPassword(username: string, code: string, newPassword: string) { return Auth.forgotPasswordSubmit(username, code, newPassword); }
+
+export async function fetchAuthSession() {
+  try {
+    const session = await Auth.currentSession();
+    return {
+      tokens: {
+        idToken: session.getIdToken().getJwtToken(),
+        accessToken: session.getAccessToken().getJwtToken(),
+        refreshToken: session.getRefreshToken().getToken(),
+      },
+    };
+  } catch (e) {
+    return null;
+  }
+}
 
 export async function cognitoToken() {
   const session = await fetchAuthSession();
-  return session.tokens?.idToken?.toString() ?? null;
+  return session?.tokens?.idToken ?? null;
 }
 
 export async function awsApi(path: string, init: RequestInit = {}) {
