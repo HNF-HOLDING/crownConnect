@@ -1,6 +1,7 @@
 "use client";
 
-import Amplify, { Auth } from 'aws-amplify';
+import Amplify from 'aws-amplify';
+import { Auth } from '@aws-amplify/auth';
 
 export const apiUrl = process.env.NEXT_PUBLIC_CROWCONNECT_API_URL ?? 'https://t4rexmr9zk.execute-api.af-south-1.amazonaws.com';
 const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? 'af-south-1_BtHsQHwj3';
