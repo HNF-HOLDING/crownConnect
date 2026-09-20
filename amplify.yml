@@ -4,7 +4,10 @@ frontend:
     preBuild:
       commands:
         - corepack enable
-        - npm install -g pnpm@latest
+        - |
+          if ! command -v pnpm >/dev/null 2>&1; then
+            npm install -g pnpm@latest
+          fi
         - corepack prepare pnpm@latest --activate
         - pnpm install --frozen-lockfile
     build:
