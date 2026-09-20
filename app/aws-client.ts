@@ -9,7 +9,15 @@ const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID ?? 
 const awsRegion = process.env.NEXT_PUBLIC_AWS_REGION ?? 'af-south-1';
 
 // Configure Amplify Auth with the expected shape so helpers like fetchAuthSession work
-const authConfig: any = { region: awsRegion, userPoolId, userPoolWebClientId: userPoolClientId };
+const authConfig: any = {
+  Cognito: {
+    userPoolId,
+    userPoolClientId: userPoolClientId,
+  },
+  region: awsRegion,
+};
+// Provide minimal `loginWith` defaults to avoid undefined access in the library
+authConfig.Cognito.loginWith = authConfig.Cognito.loginWith ?? { username: true, email: false, phone: false };
 Amplify.configure({ Auth: authConfig });
 
 export { confirmResetPassword, confirmSignUp, fetchAuthSession, resetPassword, signIn, signOut, signUp };
