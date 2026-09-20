@@ -18,6 +18,9 @@ Parameters:
   ApiPackageKey:
     Type: String
     Default: deployments/crownconnect-api.zip
+  FrontendOrigin:
+    Type: String
+    Default: https://feature001.d9zjyay6u0gve.amplifyapp.com
 
 Conditions:
   UsePackagedApi: !Equals [!Ref DeployApiPackage, 'true']
@@ -126,7 +129,7 @@ Resources:
         CorsRules:
           - AllowedHeaders: ['*']
             AllowedMethods: [GET, PUT]
-            AllowedOrigins: ['*']
+            AllowedOrigins: [!Ref FrontendOrigin]
             MaxAge: 3000
 
   UserPool:
@@ -135,6 +138,18 @@ Resources:
       UserPoolName: !Sub crownconnect-${Environment}-users
       AutoVerifiedAttributes: [email]
       UsernameAttributes: [email]
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 7
       Schema:
         - Name: email
           Required: true
@@ -150,6 +165,14 @@ Resources:
       UserPoolId: !Ref UserPool
       GenerateSecret: false
       ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH, ALLOW_USER_PASSWORD_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
 
   Database:
     Type: AWS::RDS::DBInstance
@@ -212,6 +235,7 @@ Resources:
         Variables:
           APP_ENV: !Ref Environment
           MEDIA_BUCKET: !Ref MediaBucket
+          FRONTEND_ORIGIN: !Ref FrontendOrigin
           DATABASE_SECRET_ARN: !Ref DatabaseSecret
           DATABASE_HOST: !GetAtt Database.Endpoint.Address
           DATABASE_NAME: !Ref DatabaseName
@@ -234,7 +258,7 @@ Resources:
       CorsConfiguration:
         AllowHeaders: [content-type, authorization]
         AllowMethods: [GET, POST, PATCH, DELETE, OPTIONS]
-        AllowOrigins: ['*']
+        AllowOrigins: [!Ref FrontendOrigin]
 
   ApiIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -291,6 +315,14 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: POST /account
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+      Target: !Sub integrations/${ApiIntegration}
+  AccountReadRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /account
       AuthorizationType: JWT
       AuthorizerId: !Ref CognitoAuthorizer
       Target: !Sub integrations/${ApiIntegration}
@@ -381,6 +413,9 @@ Resources:
       ApiId: !Ref HttpApi
       StageName: $default
       AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
 
   ApiInvokePermission:
     Type: AWS::Lambda::Permission

@@ -6,9 +6,9 @@ const { Pool } = require('pg');
 let pool;
 let schemaReady;
 const s3 = new S3Client({});
-const json = (statusCode, body) => ({
+const json = (statusCode, body, origin) => ({
   statusCode,
-  headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type,authorization', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS' },
+  headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': origin || process.env.FRONTEND_ORIGIN || '*', 'access-control-allow-headers': 'content-type,authorization', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS' },
   body: JSON.stringify(body),
 });
 const error = (statusCode, message) => json(statusCode, { error: message });
@@ -23,7 +23,13 @@ async function database() {
 async function readyDatabase() {
   const db = await database();
   schemaReady ||= db.query(`
-    CREATE TABLE IF NOT EXISTS account_profiles (id BIGSERIAL PRIMARY KEY, cognito_sub UUID NOT NULL UNIQUE, email TEXT NOT NULL, primary_role TEXT NOT NULL CHECK (primary_role IN ('customer', 'seller')), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS account_profiles (id BIGSERIAL PRIMARY KEY, cognito_sub UUID NOT NULL UNIQUE, email TEXT NOT NULL, primary_role TEXT NOT NULL CHECK (primary_role IN ('customer', 'seller')), full_name TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', city TEXT NOT NULL DEFAULT '', province TEXT NOT NULL DEFAULT '', marketing_consent BOOLEAN NOT NULL DEFAULT FALSE, terms_accepted_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS full_name TEXT NOT NULL DEFAULT '';
+    ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
+    ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS city TEXT NOT NULL DEFAULT '';
+    ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS province TEXT NOT NULL DEFAULT '';
+    ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ;
     CREATE TABLE IF NOT EXISTS seller_profiles (id BIGSERIAL PRIMARY KEY, cognito_sub UUID NOT NULL UNIQUE REFERENCES account_profiles(cognito_sub) ON DELETE CASCADE, email TEXT NOT NULL, business_name TEXT NOT NULL, city TEXT NOT NULL, phone TEXT NOT NULL, specialty TEXT NOT NULL, featured_service TEXT NOT NULL, service_price INTEGER NOT NULL CHECK (service_price >= 0), bio TEXT NOT NULL, availability_days TEXT NOT NULL DEFAULT 'Mon,Tue,Wed,Thu,Fri,Sat', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS seller_services (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, name TEXT NOT NULL, price INTEGER NOT NULL CHECK (price >= 0), duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0), description TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS seller_media (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, object_key TEXT NOT NULL UNIQUE, media_type TEXT NOT NULL CHECK (media_type IN ('image', 'video')), content_type TEXT NOT NULL, file_name TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -40,7 +46,7 @@ async function readyDatabase() {
 
 function claims(event) {
   const jwt = event.requestContext?.authorizer?.jwt?.claims;
-  return jwt?.sub && jwt?.email ? { sub: jwt.sub, email: jwt.email } : null;
+  return jwt?.sub && jwt?.email ? { sub: jwt.sub, email: jwt.email, name: clean(jwt.name, 100) } : null;
 }
 function clean(value, max) { return String(value || '').trim().slice(0, max); }
 function dateIsValid(value) { const date = new Date(`${value}T12:00:00Z`); return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value; }
@@ -53,18 +59,22 @@ function today() {
 async function body(event) { try { return JSON.parse(event.body || '{}'); } catch { return null; } }
 
 async function listSellers(event) {
+  const origin = arguments[1];
   const query = event.queryStringParameters || {}, values = [], where = [];
   if (query.city) { values.push(clean(query.city, 80)); where.push(`city = $${values.length}`); }
   if (query.specialty) { values.push(clean(query.specialty, 40)); where.push(`specialty = $${values.length}`); }
   if (query.maxPrice && Number.isFinite(Number(query.maxPrice))) { values.push(Number(query.maxPrice)); where.push(`service_price <= $${values.length}`); }
   if (query.q) { values.push(`%${clean(query.q, 100)}%`); where.push(`(business_name ILIKE $${values.length} OR featured_service ILIKE $${values.length} OR bio ILIKE $${values.length})`); }
-  const result = await (await readyDatabase()).query(`SELECT id, business_name, city, phone, specialty, featured_service, service_price, bio, availability_days FROM seller_profiles ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY updated_at DESC LIMIT 48`, values);
-  return json(200, { sellers: result.rows });
+  const result = await (await readyDatabase()).query(`SELECT id, business_name, city, specialty, featured_service, service_price, bio, availability_days FROM seller_profiles ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY updated_at DESC LIMIT 48`, values);
+  // Do not expose seller phone numbers on public list
+  const sellers = result.rows.map(r => ({ id: r.id, business_name: r.business_name, city: r.city, specialty: r.specialty, featured_service: r.featured_service, service_price: r.service_price, bio: r.bio, availability_days: r.availability_days }));
+  return json(200, { sellers });
 }
 
 async function sellerDetails(id) {
+  const origin = arguments[1];
   const db = await readyDatabase();
-  const seller = await db.query('SELECT id, business_name, city, phone, specialty, featured_service, service_price, bio, availability_days FROM seller_profiles WHERE id = $1', [id]);
+  const seller = await db.query('SELECT id, business_name, city, specialty, featured_service, service_price, bio, availability_days FROM seller_profiles WHERE id = $1', [id]);
   if (!seller.rowCount) return error(404, 'Stylist not found');
   const services = await db.query('SELECT id, name, price, duration_minutes, description FROM seller_services WHERE seller_id = $1 ORDER BY created_at DESC', [id]);
   const media = await db.query('SELECT id, media_type, content_type, file_name, object_key FROM seller_media WHERE seller_id = $1 ORDER BY created_at DESC', [id]);
@@ -75,10 +85,13 @@ async function sellerDetails(id) {
     file_name: item.file_name,
     url: await getSignedUrl(s3, new GetObjectCommand({ Bucket: process.env.MEDIA_BUCKET, Key: item.object_key }), { expiresIn: 3600 }),
   })));
-  return json(200, { seller: seller.rows[0], services: services.rows, media: withUrls });
+  // Public detail endpoint: do not return seller phone. Booking will route through POST /bookings which notifies the seller.
+  const publicSeller = { id: seller.rows[0].id, business_name: seller.rows[0].business_name, city: seller.rows[0].city, specialty: seller.rows[0].specialty, featured_service: seller.rows[0].featured_service, service_price: seller.rows[0].service_price, bio: seller.rows[0].bio, availability_days: seller.rows[0].availability_days };
+  return json(200, { seller: publicSeller, services: services.rows, media: withUrls });
 }
 
 async function availability(event) {
+  const origin = arguments[1];
   const query = event.queryStringParameters || {}, sellerId = Number(query.sellerId), date = clean(query.date, 10);
   if (!Number.isInteger(sellerId) || !dateIsValid(date)) return error(400, 'Invalid request');
   const db = await readyDatabase();
@@ -89,14 +102,43 @@ async function availability(event) {
 }
 
 async function saveAccount(event) {
+  const origin = arguments[1];
   const user = claims(event), data = await body(event), role = data && clean(data.role, 10);
   if (!user) return error(401, 'Sign in required');
   if (!['customer', 'seller'].includes(role)) return error(400, 'Choose Customer or Seller.');
-  await (await readyDatabase()).query(`INSERT INTO account_profiles (cognito_sub, email, primary_role) VALUES ($1::uuid, $2, $3) ON CONFLICT (cognito_sub) DO UPDATE SET email = EXCLUDED.email, primary_role = EXCLUDED.primary_role, updated_at = NOW()`, [user.sub, user.email, role]);
-  return json(200, { ok: true, role });
+  const fullName = clean(data?.fullName || user.name, 100), phone = clean(data?.phone, 30);
+  const city = clean(data?.city, 80), province = clean(data?.province, 40);
+  const marketingConsent = data?.marketingConsent === true;
+  if (!fullName || !phone || !city || !province) return error(400, 'Complete your name, phone, city, and province.');
+  if (data?.termsAccepted !== true) return error(400, 'Accept the Terms and Privacy Notice to continue.');
+  const result = await (await readyDatabase()).query(
+    `INSERT INTO account_profiles (cognito_sub, email, primary_role, full_name, phone, city, province, marketing_consent, terms_accepted_at)
+     VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, NOW())
+     ON CONFLICT (cognito_sub) DO UPDATE SET email = EXCLUDED.email, primary_role = EXCLUDED.primary_role,
+       full_name = EXCLUDED.full_name, phone = EXCLUDED.phone, city = EXCLUDED.city,
+       province = EXCLUDED.province, marketing_consent = EXCLUDED.marketing_consent,
+       terms_accepted_at = COALESCE(account_profiles.terms_accepted_at, NOW()), updated_at = NOW()
+     RETURNING email, primary_role, full_name, phone, city, province, marketing_consent`,
+    [user.sub, user.email, role, fullName, phone, city, province, marketingConsent],
+  );
+  return json(200, { account: result.rows[0] });
+}
+
+async function getAccount(event) {
+  const origin = arguments[1];
+  const user = claims(event);
+  if (!user) return error(401, 'Sign in required');
+  const result = await (await readyDatabase()).query(
+    `SELECT email, primary_role, full_name, phone, city, province, marketing_consent,
+            terms_accepted_at IS NOT NULL AS terms_accepted
+     FROM account_profiles WHERE cognito_sub = $1::uuid`,
+    [user.sub],
+  );
+  return json(200, { account: result.rows[0] || null, identity: { email: user.email, name: user.name } });
 }
 
 async function createBooking(event) {
+  const origin = arguments[1];
   const user = claims(event), data = await body(event);
   if (!user) return error(401, 'Sign in required');
   const sellerId = Number(data?.sellerId), serviceId = Number(data?.serviceId), customerName = clean(data?.customerName, 80), customerPhone = clean(data?.customerPhone, 30), appointmentDate = clean(data?.appointmentDate, 10), appointmentTime = clean(data?.appointmentTime, 5), notes = clean(data?.notes, 500);
@@ -114,6 +156,7 @@ async function createBooking(event) {
   return json(201, { ok: true });
 }
 async function saveSeller(event) {
+  const origin = arguments[1];
   const user = claims(event);
   const data = await body(event);
 
@@ -175,6 +218,7 @@ async function saveSeller(event) {
 }
 
 async function createService(event) {
+  const origin = arguments[1];
   const user = claims(event), data = await body(event);
   if (!user) return error(401, 'Sign in required');
 
@@ -209,6 +253,7 @@ const mediaFormats = {
 };
 
 async function createMediaUpload(event) {
+  const origin = arguments[1];
   const user = claims(event), data = await body(event);
   if (!user) return error(401, 'Sign in required');
 
@@ -237,6 +282,7 @@ async function createMediaUpload(event) {
 }
 
 async function listSellerBookings(event) {
+  const origin = arguments[1];
   const user = claims(event);
   if (!user) return error(401, 'Sign in required');
 
@@ -260,6 +306,7 @@ async function listSellerBookings(event) {
 }
 
 async function ownSeller(event) {
+  const origin = arguments[1];
   const user = claims(event);
   if (!user) return error(401, 'Sign in required');
   const db = await readyDatabase();
@@ -296,6 +343,7 @@ async function ownSeller(event) {
 }
 
 async function listCustomerBookings(event) {
+  const origin = arguments[1];
   const user = claims(event);
   if (!user) return error(401, 'Sign in required');
   const result = await (await readyDatabase()).query(
@@ -312,6 +360,7 @@ async function listCustomerBookings(event) {
 }
 
 async function cancelCustomerBooking(event) {
+  const origin = arguments[1];
   const user = claims(event);
   if (!user) return error(401, 'Sign in required');
   const bookingId = Number(event.pathParameters?.id);
@@ -327,6 +376,7 @@ async function cancelCustomerBooking(event) {
 }
 
 async function deleteMedia(event) {
+  const origin = arguments[1];
   const user = claims(event);
   if (!user) return error(401, 'Sign in required');
   const mediaId = Number(event.pathParameters?.id);
@@ -345,6 +395,7 @@ async function deleteMedia(event) {
 }
 
 async function updateBookingStatus(event) {
+  const origin = arguments[1];
   const user = claims(event), data = await body(event);
   if (!user) return error(401, 'Sign in required');
 
@@ -371,23 +422,25 @@ async function updateBookingStatus(event) {
 
 exports.handler = async (event) => {
   try {
-    if (event.requestContext?.http?.method === 'OPTIONS') return json(204, {});
+    const origin = event.headers?.origin || event.headers?.Origin;
+    if (event.requestContext?.http?.method === 'OPTIONS') return json(204, {}, origin);
     const method = event.requestContext?.http?.method, path = event.rawPath;
-    if (method === 'GET' && path === '/health') return json(200, { status: 'ok', service: 'crownconnect-api', environment: process.env.APP_ENV });
-    if (method === 'GET' && path === '/sellers') return listSellers(event);
-    if (method === 'GET' && /^\/sellers\/\d+$/.test(path)) return sellerDetails(Number(path.split('/').pop()));
-    if (method === 'GET' && path === '/availability') return availability(event);
-    if (method === 'POST' && path === '/account') return saveAccount(event);
-    if (method === 'POST' && path === '/bookings') return createBooking(event);
-    if (method === 'POST' && path === '/seller') return saveSeller(event);
-    if (method === 'GET' && path === '/seller') return ownSeller(event);
-    if (method === 'POST' && path === '/services') return createService(event);
-    if (method === 'POST' && path === '/media/upload-url') return createMediaUpload(event);
-    if (method === 'DELETE' && /^\/media\/\d+$/.test(path)) return deleteMedia(event);
-    if (method === 'GET' && path === '/seller/bookings') return listSellerBookings(event);
-    if (method === 'GET' && path === '/bookings') return listCustomerBookings(event);
-    if (method === 'PATCH' && /^\/bookings\/\d+\/cancel$/.test(path)) return cancelCustomerBooking(event);
-    if (method === 'PATCH' && /^\/bookings\/\d+\/status$/.test(path)) return updateBookingStatus(event);
+    if (method === 'GET' && path === '/health') return json(200, { status: 'ok', service: 'crownconnect-api', environment: process.env.APP_ENV }, origin);
+    if (method === 'GET' && path === '/sellers') return listSellers(event, origin);
+    if (method === 'GET' && /^\/sellers\/\d+$/.test(path)) return sellerDetails(Number(path.split('/').pop()), origin);
+    if (method === 'GET' && path === '/availability') return availability(event, origin);
+    if (method === 'POST' && path === '/account') return saveAccount(event, origin);
+    if (method === 'GET' && path === '/account') return getAccount(event, origin);
+    if (method === 'POST' && path === '/bookings') return createBooking(event, origin);
+    if (method === 'POST' && path === '/seller') return saveSeller(event, origin);
+    if (method === 'GET' && path === '/seller') return ownSeller(event, origin);
+    if (method === 'POST' && path === '/services') return createService(event, origin);
+    if (method === 'POST' && path === '/media/upload-url') return createMediaUpload(event, origin);
+    if (method === 'DELETE' && /^\/media\/\d+$/.test(path)) return deleteMedia(event, origin);
+    if (method === 'GET' && path === '/seller/bookings') return listSellerBookings(event, origin);
+    if (method === 'GET' && path === '/bookings') return listCustomerBookings(event, origin);
+    if (method === 'PATCH' && /^\/bookings\/\d+\/cancel$/.test(path)) return cancelCustomerBooking(event, origin);
+    if (method === 'PATCH' && /^\/bookings\/\d+\/status$/.test(path)) return updateBookingStatus(event, origin);
     return error(404, 'Not found');
   } catch (cause) {
     console.error(cause);
