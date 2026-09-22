@@ -246,3 +246,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .marketplace-intro .maps-link { display: inline-block; margin: 4px 0 22px; }
 .card-map-link { display: inline-block; margin-top: 3px; font-size: 13px; }
 .map-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 18px; }
+.button.danger { background: #8b2929; color: white; }
+.pro-application-page { max-width: 980px; }
+.application-status { margin-bottom: 24px; padding: 26px; border-radius: 14px; border: 1px solid #e4d7dc; background: #faf5f7; }
+.application-status > span { display: inline-block; border-radius: 999px; padding: 6px 10px; color: #792d49; background: #f0e2e8; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.application-status.status-approved { border-color: #b8d8c4; background: #eff8f2; }
+.application-status.status-rejected { border-color: #e1bcbc; background: #fdf1f1; }
+.application-list { display: grid; gap: 20px; }
+.application-review { padding: 26px; border: 1px solid #e4d7dc; border-radius: 15px; background: white; box-shadow: 0 10px 34px #4b203409; }
+.application-review dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.application-review dl div { padding: 12px; border-radius: 9px; background: #faf5f7; }
+.application-review dt { color: #7f7078; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.application-review dd { margin: 4px 0 0; }
+@media (max-width: 650px) { .application-review dl { grid-template-columns: 1fr; } }

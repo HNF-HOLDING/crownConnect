@@ -30,6 +30,8 @@ async function readyDatabase() {
     ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS province TEXT NOT NULL DEFAULT '';
     ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE account_profiles ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ;
+    CREATE TABLE IF NOT EXISTS professional_applications (id BIGSERIAL PRIMARY KEY, cognito_sub UUID NOT NULL UNIQUE, email TEXT NOT NULL, legal_name TEXT NOT NULL, business_name TEXT NOT NULL, phone TEXT NOT NULL, city TEXT NOT NULL, province TEXT NOT NULL, service_area TEXT NOT NULL, categories TEXT NOT NULL, years_experience INTEGER NOT NULL CHECK (years_experience >= 0), bio TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'under_review', 'more_information', 'approved', 'rejected')), review_note TEXT NOT NULL DEFAULT '', submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), reviewed_at TIMESTAMPTZ, reviewed_by TEXT, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS admin_audit_events (id BIGSERIAL PRIMARY KEY, admin_sub UUID NOT NULL, admin_email TEXT NOT NULL, action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT NOT NULL, details JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS seller_profiles (id BIGSERIAL PRIMARY KEY, cognito_sub UUID NOT NULL UNIQUE REFERENCES account_profiles(cognito_sub) ON DELETE CASCADE, email TEXT NOT NULL, business_name TEXT NOT NULL, city TEXT NOT NULL, phone TEXT NOT NULL, specialty TEXT NOT NULL, featured_service TEXT NOT NULL, service_price INTEGER NOT NULL CHECK (service_price >= 0), bio TEXT NOT NULL, availability_days TEXT NOT NULL DEFAULT 'Mon,Tue,Wed,Thu,Fri,Sat', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS seller_services (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, name TEXT NOT NULL, price INTEGER NOT NULL CHECK (price >= 0), duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0), description TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS seller_media (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, object_key TEXT NOT NULL UNIQUE, media_type TEXT NOT NULL CHECK (media_type IN ('image', 'video')), content_type TEXT NOT NULL, file_name TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -39,6 +41,11 @@ async function readyDatabase() {
     CREATE INDEX IF NOT EXISTS idx_seller_media_seller_created ON seller_media(seller_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_booking_seller_date ON booking_requests(seller_id, appointment_date);
     CREATE UNIQUE INDEX IF NOT EXISTS booking_active_slot ON booking_requests(seller_id, appointment_date, appointment_time) WHERE status IN ('pending', 'confirmed');
+    CREATE INDEX IF NOT EXISTS idx_professional_applications_status ON professional_applications(status, submitted_at DESC);
+    INSERT INTO professional_applications (cognito_sub, email, legal_name, business_name, phone, city, province, service_area, categories, years_experience, bio, status, reviewed_at, reviewed_by)
+      SELECT s.cognito_sub, s.email, COALESCE(NULLIF(a.full_name, ''), s.business_name), s.business_name, s.phone, s.city, COALESCE(NULLIF(a.province, ''), 'Not provided'), s.city, s.specialty, 0, s.bio, 'approved', NOW(), 'legacy-migration'
+      FROM seller_profiles s JOIN account_profiles a ON a.cognito_sub = s.cognito_sub
+      ON CONFLICT (cognito_sub) DO NOTHING;
   `);
   await schemaReady;
   return db;
@@ -46,8 +53,10 @@ async function readyDatabase() {
 
 function claims(event) {
   const jwt = event.requestContext?.authorizer?.jwt?.claims;
-  return jwt?.sub && jwt?.email ? { sub: jwt.sub, email: jwt.email, name: clean(jwt.name, 100) } : null;
+  const groups = Array.isArray(jwt?.['cognito:groups']) ? jwt['cognito:groups'] : String(jwt?.['cognito:groups'] || '').split(',').map((group) => group.trim()).filter(Boolean);
+  return jwt?.sub && jwt?.email ? { sub: jwt.sub, email: jwt.email, name: clean(jwt.name, 100), groups } : null;
 }
+function isAdmin(user) { return user?.groups?.includes('admin') || user?.groups?.includes('super_admin'); }
 function clean(value, max) { return String(value || '').trim().slice(0, max); }
 function dateIsValid(value) { const date = new Date(`${value}T12:00:00Z`); return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value; }
 function weekday(value) { return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(`${value}T12:00:00Z`).getUTCDay()]; }
@@ -111,7 +120,9 @@ async function saveAccount(event) {
   const marketingConsent = data?.marketingConsent === true;
   if (!fullName || !phone || !city || !province) return error(400, 'Complete your name, phone, city, and province.');
   if (data?.termsAccepted !== true) return error(400, 'Accept the Terms and Privacy Notice to continue.');
-  const result = await (await readyDatabase()).query(
+  const db = await readyDatabase();
+  if (role === 'seller' && !(await requireApprovedProfessional(user, db))) return error(403, 'Apply through CrownConnect Pro and wait for approval before selecting the professional role.');
+  const result = await db.query(
     `INSERT INTO account_profiles (cognito_sub, email, primary_role, full_name, phone, city, province, marketing_consent, terms_accepted_at)
      VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, NOW())
      ON CONFLICT (cognito_sub) DO UPDATE SET email = EXCLUDED.email, primary_role = EXCLUDED.primary_role,
@@ -135,6 +146,60 @@ async function getAccount(event) {
     [user.sub],
   );
   return json(200, { account: result.rows[0] || null, identity: { email: user.email, name: user.name } });
+}
+
+async function saveProfessionalApplication(event) {
+  const user = claims(event), data = await body(event);
+  if (!user) return error(401, 'Sign in required');
+  const legalName = clean(data?.legalName || user.name, 100), businessName = clean(data?.businessName, 120);
+  const phone = clean(data?.phone, 30), city = clean(data?.city, 80), province = clean(data?.province, 40);
+  const serviceArea = clean(data?.serviceArea, 120), categories = clean(data?.categories, 300), bio = clean(data?.bio, 1000);
+  const yearsExperience = Number(data?.yearsExperience);
+  if (!legalName || !businessName || !phone || !city || !province || !serviceArea || !categories || !bio || !Number.isInteger(yearsExperience) || yearsExperience < 0 || data?.providerAgreement !== true) return error(400, 'Complete every required application field and accept the provider agreement.');
+  const db = await readyDatabase();
+  const existing = await db.query('SELECT status FROM professional_applications WHERE cognito_sub = $1::uuid', [user.sub]);
+  if (existing.rows[0]?.status === 'approved') return error(409, 'This professional account is already approved.');
+  await db.query(`INSERT INTO account_profiles (cognito_sub, email, primary_role, full_name, phone, city, province, terms_accepted_at)
+    VALUES ($1::uuid, $2, 'customer', $3, $4, $5, $6, NOW())
+    ON CONFLICT (cognito_sub) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name, phone = EXCLUDED.phone, city = EXCLUDED.city, province = EXCLUDED.province, terms_accepted_at = COALESCE(account_profiles.terms_accepted_at, NOW()), updated_at = NOW()`, [user.sub, user.email, legalName, phone, city, province]);
+  const result = await db.query(`INSERT INTO professional_applications (cognito_sub, email, legal_name, business_name, phone, city, province, service_area, categories, years_experience, bio, status, review_note, submitted_at, updated_at)
+    VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'submitted', '', NOW(), NOW())
+    ON CONFLICT (cognito_sub) DO UPDATE SET email = EXCLUDED.email, legal_name = EXCLUDED.legal_name, business_name = EXCLUDED.business_name, phone = EXCLUDED.phone, city = EXCLUDED.city, province = EXCLUDED.province, service_area = EXCLUDED.service_area, categories = EXCLUDED.categories, years_experience = EXCLUDED.years_experience, bio = EXCLUDED.bio, status = 'submitted', review_note = '', submitted_at = NOW(), reviewed_at = NULL, reviewed_by = NULL, updated_at = NOW()
+    RETURNING id, business_name, status, submitted_at`, [user.sub, user.email, legalName, businessName, phone, city, province, serviceArea, categories, yearsExperience, bio]);
+  return json(201, { application: result.rows[0] });
+}
+
+async function getProfessionalApplication(event) {
+  const user = claims(event);
+  if (!user) return error(401, 'Sign in required');
+  const result = await (await readyDatabase()).query(`SELECT id, email, legal_name, business_name, phone, city, province, service_area, categories, years_experience, bio, status, review_note, submitted_at, reviewed_at FROM professional_applications WHERE cognito_sub = $1::uuid`, [user.sub]);
+  return json(200, { application: result.rows[0] || null });
+}
+
+async function listProfessionalApplications(event) {
+  const user = claims(event);
+  if (!isAdmin(user)) return error(403, 'Administrator permission required.');
+  const result = await (await readyDatabase()).query(`SELECT id, email, legal_name, business_name, phone, city, province, service_area, categories, years_experience, bio, status, review_note, submitted_at, reviewed_at, reviewed_by FROM professional_applications ORDER BY CASE status WHEN 'submitted' THEN 0 WHEN 'under_review' THEN 1 WHEN 'more_information' THEN 2 ELSE 3 END, submitted_at DESC LIMIT 200`);
+  return json(200, { applications: result.rows });
+}
+
+async function reviewProfessionalApplication(event) {
+  const user = claims(event), data = await body(event), applicationId = Number(event.pathParameters?.id);
+  if (!isAdmin(user)) return error(403, 'Administrator permission required.');
+  const status = clean(data?.status, 30), reviewNote = clean(data?.reviewNote, 1000);
+  if (!Number.isInteger(applicationId) || !['under_review', 'more_information', 'approved', 'rejected'].includes(status)) return error(400, 'Choose a valid review decision.');
+  if (['more_information', 'rejected'].includes(status) && !reviewNote) return error(400, 'Add a review note for this decision.');
+  const db = await readyDatabase();
+  const result = await db.query(`UPDATE professional_applications SET status = $1, review_note = $2, reviewed_at = NOW(), reviewed_by = $3, updated_at = NOW() WHERE id = $4 RETURNING id, cognito_sub, email, business_name, status, review_note`, [status, reviewNote, user.email, applicationId]);
+  if (!result.rowCount) return error(404, 'Application not found.');
+  if (status === 'approved') await db.query(`UPDATE account_profiles SET primary_role = 'seller', updated_at = NOW() WHERE cognito_sub = $1::uuid`, [result.rows[0].cognito_sub]);
+  await db.query(`INSERT INTO admin_audit_events (admin_sub, admin_email, action, target_type, target_id, details) VALUES ($1::uuid, $2, $3, 'professional_application', $4, $5::jsonb)`, [user.sub, user.email, `application.${status}`, String(applicationId), JSON.stringify({ reviewNote })]);
+  return json(200, { application: result.rows[0] });
+}
+
+async function requireApprovedProfessional(user, db) {
+  const result = await db.query(`SELECT status FROM professional_applications WHERE cognito_sub = $1::uuid`, [user.sub]);
+  return result.rows[0]?.status === 'approved';
 }
 
 async function createBooking(event) {
@@ -181,6 +246,7 @@ async function saveSeller(event) {
   }
 
   const db = await readyDatabase();
+  if (!(await requireApprovedProfessional(user, db))) return error(403, 'Professional approval is required before publishing a profile.');
 
   await db.query(
     `INSERT INTO account_profiles (cognito_sub, email, primary_role)
@@ -310,6 +376,8 @@ async function ownSeller(event) {
   const user = claims(event);
   if (!user) return error(401, 'Sign in required');
   const db = await readyDatabase();
+  const application = await db.query('SELECT status, review_note FROM professional_applications WHERE cognito_sub = $1::uuid', [user.sub]);
+  if (application.rows[0]?.status !== 'approved') return error(403, application.rowCount ? `Application status: ${application.rows[0].status}` : 'Submit a professional application first.');
   const seller = await db.query(
     `SELECT id, business_name, city, phone, specialty, featured_service,
             service_price, bio, availability_days
@@ -431,6 +499,10 @@ exports.handler = async (event) => {
     if (method === 'GET' && path === '/availability') return availability(event, origin);
     if (method === 'POST' && path === '/account') return saveAccount(event, origin);
     if (method === 'GET' && path === '/account') return getAccount(event, origin);
+    if (method === 'POST' && path === '/pro/application') return saveProfessionalApplication(event, origin);
+    if (method === 'GET' && path === '/pro/application') return getProfessionalApplication(event, origin);
+    if (method === 'GET' && path === '/admin/applications') return listProfessionalApplications(event, origin);
+    if (method === 'PATCH' && /^\/admin\/applications\/\d+$/.test(path)) return reviewProfessionalApplication(event, origin);
     if (method === 'POST' && path === '/bookings') return createBooking(event, origin);
     if (method === 'POST' && path === '/seller') return saveSeller(event, origin);
     if (method === 'GET' && path === '/seller') return ownSeller(event, origin);

@@ -2,13 +2,24 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { cognitoGroups, cognitoToken } from '../aws-client';
+import { awsApi, cognitoGroups, cognitoToken } from '../aws-client';
 import { PortalHeader } from '../portal-header';
 
 export default function AdminPortal() {
   const [state, setState] = useState<'checking' | 'denied' | 'allowed'>(
     'checking',
   );
+  const [applications, setApplications] = useState<any[]>([]),
+    [notes, setNotes] = useState<Record<string, string>>({}),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState('');
+  async function loadApplications() {
+    const response = await awsApi('/admin/applications'),
+      data = await response.json();
+    if (!response.ok)
+      throw new Error(data.error || 'Unable to load applications.');
+    setApplications(data.applications || []);
+  }
   useEffect(() => {
     void (async () => {
       if (!(await cognitoToken())) {
@@ -16,13 +27,31 @@ export default function AdminPortal() {
         return;
       }
       const groups = await cognitoGroups();
-      setState(
-        groups.includes('admin') || groups.includes('super_admin')
-          ? 'allowed'
-          : 'denied',
-      );
+      const allowed =
+        groups.includes('admin') || groups.includes('super_admin');
+      setState(allowed ? 'allowed' : 'denied');
+      if (allowed)
+        await loadApplications().catch((cause) =>
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : 'Unable to load applications.',
+          ),
+        );
     })();
   }, []);
+  async function review(id: string, status: string) {
+    setBusy(`${id}:${status}`);
+    setError('');
+    const response = await awsApi(`/admin/applications/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, reviewNote: notes[id] || '' }),
+      }),
+      data = await response.json();
+    if (!response.ok) setError(data.error || 'Unable to save this decision.');
+    else await loadApplications();
+    setBusy('');
+  }
   return (
     <>
       <PortalHeader portal="admin" />
@@ -44,21 +73,110 @@ export default function AdminPortal() {
         ) : (
           <>
             <p className="eyebrow">ADMIN CONSOLE</p>
-            <h1>Platform operations.</h1>
-            <div className="admin-grid">
-              <article>
-                <strong>Professional applications</strong>
-                <span>Approval workflow is the next implementation phase.</span>
-              </article>
-              <article>
-                <strong>Customers and professionals</strong>
-                <span>Account-management tools will appear here.</span>
-              </article>
-              <article>
-                <strong>Reports and audit events</strong>
-                <span>Administrative actions will be recorded.</span>
-              </article>
-            </div>
+            <h1>Professional applications.</h1>
+            <p className="space-lead">
+              Review each provider before they can publish a profile or access
+              CrownConnect Pro.
+            </p>
+            {error && (
+              <p className="notice" role="alert">
+                {error}
+              </p>
+            )}
+            {!applications.length ? (
+              <div className="empty">
+                No professional applications are waiting for review.
+              </div>
+            ) : (
+              <section className="application-list">
+                {applications.map((application) => (
+                  <article className="application-review" key={application.id}>
+                    <div className="booking-head">
+                      <div>
+                        <p className="eyebrow">
+                          {application.status.replace('_', ' ')}
+                        </p>
+                        <h2>{application.business_name}</h2>
+                        <p>
+                          {application.legal_name} · {application.email}
+                          <br />
+                          {application.phone} · {application.city},{' '}
+                          {application.province}
+                        </p>
+                      </div>
+                      <span className={`status ${application.status}`}>
+                        {application.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <dl>
+                      <div>
+                        <dt>Service area</dt>
+                        <dd>{application.service_area}</dd>
+                      </div>
+                      <div>
+                        <dt>Categories</dt>
+                        <dd>{application.categories}</dd>
+                      </div>
+                      <div>
+                        <dt>Experience</dt>
+                        <dd>{application.years_experience} years</dd>
+                      </div>
+                    </dl>
+                    <p>{application.bio}</p>
+                    <label>
+                      Review note
+                      <textarea
+                        value={
+                          notes[application.id] ?? application.review_note ?? ''
+                        }
+                        onChange={(event) =>
+                          setNotes((current) => ({
+                            ...current,
+                            [application.id]: event.target.value,
+                          }))
+                        }
+                        maxLength={1000}
+                        placeholder="Required when requesting information or rejecting"
+                      />
+                    </label>
+                    <div className="inline-actions">
+                      <button
+                        className="button ghost small"
+                        disabled={Boolean(busy)}
+                        onClick={() =>
+                          void review(application.id, 'under_review')
+                        }
+                      >
+                        Mark under review
+                      </button>
+                      <button
+                        className="button ghost small"
+                        disabled={Boolean(busy)}
+                        onClick={() =>
+                          void review(application.id, 'more_information')
+                        }
+                      >
+                        Request information
+                      </button>
+                      <button
+                        className="button small"
+                        disabled={Boolean(busy)}
+                        onClick={() => void review(application.id, 'approved')}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="button danger small"
+                        disabled={Boolean(busy)}
+                        onClick={() => void review(application.id, 'rejected')}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            )}
           </>
         )}
       </main>

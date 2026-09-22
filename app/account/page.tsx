@@ -33,10 +33,6 @@ export default function AccountPage() {
     [saving, setSaving] = useState(false),
     [message, setMessage] = useState('');
   const isSeller = account?.primary_role === 'seller';
-  const requestedRole =
-    typeof window === 'undefined'
-      ? null
-      : new URLSearchParams(window.location.search).get('role');
   useEffect(() => {
     void (async () => {
       if (!(await cognitoToken())) {
@@ -133,41 +129,20 @@ export default function AccountPage() {
           </div>
         )}
         <form className="registration-form" onSubmit={save}>
-          <fieldset>
-            <legend>How will you mainly use CrownConnect?</legend>
-            <label className="registration-choice">
-              <input
-                type="radio"
-                name="role"
-                value="customer"
-                defaultChecked={
-                  account
-                    ? account.primary_role === 'customer'
-                    : requestedRole !== 'seller'
-                }
-              />
-              <span>
-                <strong>Customer</strong>
-                <small>Find stylists and manage appointments.</small>
-              </span>
-            </label>
-            <label className="registration-choice">
-              <input
-                type="radio"
-                name="role"
-                value="seller"
-                defaultChecked={
-                  account
-                    ? account.primary_role === 'seller'
-                    : requestedRole === 'seller'
-                }
-              />
-              <span>
-                <strong>Service provider</strong>
-                <small>List services and manage customers.</small>
-              </span>
-            </label>
-          </fieldset>
+          <input
+            type="hidden"
+            name="role"
+            value={isSeller ? 'seller' : 'customer'}
+          />
+          {!isSeller && (
+            <div className="selected-role">
+              <strong>Customer account</strong>
+              <br />
+              Want to provide services?{' '}
+              <Link href="/pro/apply">Apply through CrownConnect Pro</Link>.
+              Professional access requires approval.
+            </div>
+          )}
           <label>
             Full name
             <input

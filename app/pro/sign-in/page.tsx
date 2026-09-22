@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { RedirectScreen } from '../../redirect-screen';
 export default function ProSignIn() {
   useEffect(() => {
-    window.location.replace('/sign-in?portal=pro&next=/pro/dashboard');
+    window.location.replace('/sign-in?portal=pro&next=/pro/apply');
   }, []);
   return <RedirectScreen message="Opening Pro sign in…" />;
 }
