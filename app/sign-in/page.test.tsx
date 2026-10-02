@@ -43,4 +43,21 @@ describe('SignInPage', () => {
     expect(getPostAuthDestination('/seller')).toBe('/seller');
     expect(getPostAuthDestination('/account')).toBe('/account');
   });
+
+  it('offers password recovery on the administrator sign-in page', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/sign-in?portal=admin&next=/admin',
+    );
+
+    render(<SignInPage />);
+
+    expect(
+      await screen.findByRole('button', { name: /forgot password/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /create account/i }),
+    ).not.toBeInTheDocument();
+  });
 });

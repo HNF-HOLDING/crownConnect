@@ -247,20 +247,22 @@ export default function SignInPage() {
               {message}
             </p>
           )}
-          {!verification && portal !== 'admin' && (
+          {!verification && (
             <div className="auth-switches">
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => {
-                  setMode(mode === 'signup' ? 'signin' : 'signup');
-                  setMessage('');
-                }}
-              >
-                {mode === 'signup'
-                  ? 'Already have an account? Sign in'
-                  : 'New to CrownConnect? Create account'}
-              </button>
+              {portal !== 'admin' && (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    setMode(mode === 'signup' ? 'signin' : 'signup');
+                    setMessage('');
+                  }}
+                >
+                  {mode === 'signup'
+                    ? 'Already have an account? Sign in'
+                    : 'New to CrownConnect? Create account'}
+                </button>
+              )}
               {mode !== 'signup' && (
                 <button
                   type="button"
