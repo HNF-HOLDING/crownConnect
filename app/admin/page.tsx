@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { awsApi, cognitoGroups, cognitoToken } from '../aws-client';
+import {
+  awsApi,
+  cognitoToken,
+  fetchAuthSession,
+  signOut,
+} from '../aws-client';
 import { PortalHeader } from '../portal-header';
 
 export default function AdminPortal() {
@@ -26,18 +31,24 @@ export default function AdminPortal() {
         window.location.replace('/admin/sign-in');
         return;
       }
-      const groups = await cognitoGroups();
-      const allowed =
-        groups.includes('admin') || groups.includes('super_admin');
-      setState(allowed ? 'allowed' : 'denied');
-      if (allowed)
-        await loadApplications().catch((cause) =>
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : 'Unable to load applications.',
-          ),
-        );
+      try {
+        // Refresh Cognito first so recently assigned staff groups are included.
+        // The protected API remains the authority for administrator access.
+        await fetchAuthSession({ forceRefresh: true });
+        await loadApplications();
+        setState('allowed');
+      } catch (cause) {
+        const message =
+          cause instanceof Error
+            ? cause.message
+            : 'Unable to load applications.';
+        if (/administrator permission|required|forbidden/i.test(message)) {
+          setState('denied');
+        } else {
+          setState('allowed');
+          setError(message);
+        }
+      }
     })();
   }, []);
   async function review(id: string, status: string) {
@@ -66,9 +77,23 @@ export default function AdminPortal() {
               Your account does not have CrownConnect administrator permission.
               Administrator access cannot be requested publicly.
             </p>
-            <Link className="button ghost" href="/">
-              Return to CrownConnect
-            </Link>
+            <div className="inline-actions">
+              <button
+                className="button"
+                onClick={() => {
+                  void signOut().finally(() =>
+                    window.location.replace(
+                      '/sign-in?portal=admin&next=/admin',
+                    ),
+                  );
+                }}
+              >
+                Sign out and use administrator account
+              </button>
+              <Link className="button ghost" href="/">
+                Return to CrownConnect
+              </Link>
+            </div>
           </section>
         ) : (
           <>
