@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { cognitoToken } from './aws-client';
+import { Compass, Home, Scissors, ShoppingBag, UserRound } from 'lucide-react';
 
 export function PortalHeader({
   portal,
@@ -32,9 +33,11 @@ export function PortalHeader({
       <nav aria-label={`${name} navigation`}>
         {portal === 'customer' ? (
           <>
-            <Link href="/marketplace">Discover</Link>
-            <Link href="/products">Products</Link>
-            {signedIn && <Link href="/my-bookings">My bookings</Link>}
+            <Link href="/customer">Home</Link>
+            <Link href="/discover">Discover</Link>
+            <Link href="/shop">Shop</Link>
+            <Link href="/stylists">Stylists</Link>
+            <Link href="/my-bookings">Bookings</Link>
           </>
         ) : portal === 'pro' ? (
           <>
@@ -69,6 +72,9 @@ export function PortalHeader({
           </Link>
         )}
       </div>
+      {portal === 'customer' && <nav className="mobile-customer-nav" aria-label="Mobile customer navigation">
+        <Link href="/customer"><Home/><span>Home</span></Link><Link href="/discover"><Compass/><span>Discover</span></Link><Link href="/shop"><ShoppingBag/><span>Shop</span></Link><Link href="/stylists"><Scissors/><span>Stylists</span></Link><Link href="/account"><UserRound/><span>Profile</span></Link>
+      </nav>}
     </header>
   );
 }
