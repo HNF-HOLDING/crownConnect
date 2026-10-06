@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { cognitoToken } from './aws-client';
 import { Compass, Home, Scissors, ShoppingBag, UserRound } from 'lucide-react';
+import { CartButton } from './cart';
 
 export function PortalHeader({
   portal,
@@ -49,6 +50,7 @@ export function PortalHeader({
         )}
       </nav>
       <div className="header-actions">
+        {portal === 'customer' && <CartButton />}
         {signedIn ? (
           <Link
             className="button small"
@@ -57,7 +59,7 @@ export function PortalHeader({
                 ? '/pro/dashboard'
                 : portal === 'admin'
                   ? '/admin'
-                  : '/account'
+                  : '/customer/dashboard'
             }
           >
             {portal === 'pro'

@@ -128,6 +128,7 @@ export default function MyBookings() {
                     Cancel booking
                   </button>
                 )}
+                {booking.status === 'completed' && <Link className="cc-button small" href={`/reviews/new?booking=${booking.id}`}>Leave a review</Link>}
               </article>
             ))}
           </section>

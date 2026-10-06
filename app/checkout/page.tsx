@@ -1,0 +1,14 @@
+'use client';
+
+import Link from 'next/link';
+import { CheckCircle2, CreditCard, LockKeyhole, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { PortalHeader } from '../portal-header';
+import { useCart } from '../cart';
+import { products } from '../marketplace-data';
+
+export default function CheckoutPage() {
+  const { lines, total, clear } = useCart(); const [complete,setComplete]=useState(false); const delivery=lines.length?75:0;
+  if (complete) return <><PortalHeader portal="customer"/><main className="checkout-success"><CheckCircle2/><p className="kicker">ORDER CONFIRMED</p><h1>Beautiful choice.</h1><p>Your demonstration order is confirmed. A production payment provider will be connected before public launch.</p><Link className="cc-button" href="/customer/dashboard">View my dashboard</Link></main></>;
+  return <><PortalHeader portal="customer"/><main className="checkout-page"><header><p className="kicker">SECURE CHECKOUT</p><h1>Complete your order.</h1></header><div className="checkout-layout"><form onSubmit={event=>{event.preventDefault();clear();setComplete(true)}}><section><h2><MapPin/> Delivery details</h2><div className="checkout-fields"><label>Full name<input required placeholder="Your full name"/></label><label>Phone number<input required type="tel" placeholder="+27"/></label><label className="full">Street address<input required placeholder="Street and suburb"/></label><label>City<input required placeholder="Pretoria"/></label><label>Province<select><option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option><option>Eastern Cape</option></select></label></div></section><section><h2><CreditCard/> Payment</h2><div className="payment-placeholder"><LockKeyhole/><div><strong>Secure payment connection</strong><p>Card, Instant EFT and wallet payments will be enabled with the production payment provider.</p></div></div><label className="terms-check"><input type="checkbox" required/> I agree to the order and cancellation terms.</label><button className="cc-button full" disabled={!lines.length}>Place demonstration order · R{(total+delivery).toFixed(2)}</button></section></form><aside className="order-summary"><h2>Order summary</h2>{lines.length ? lines.map(line=>{const product=products.find(p=>p.id===line.id);if(!product)return null;return <div className="checkout-line" key={line.id}><span className={`product-thumb cell-${product.cell}`}/><span><strong>{product.name}</strong><small>Quantity {line.quantity}</small></span><b>R{(product.price*line.quantity).toFixed(2)}</b></div>}) : <div className="empty">Your cart is empty. <Link href="/shop">Visit the shop</Link>.</div>}<div className="price-summary"><div><span>Subtotal</span><strong>R{total.toFixed(2)}</strong></div><div><span>Delivery</span><strong>R{delivery.toFixed(2)}</strong></div><div className="total"><span>Total</span><strong>R{(total+delivery).toFixed(2)}</strong></div></div></aside></div></main></>;
+}

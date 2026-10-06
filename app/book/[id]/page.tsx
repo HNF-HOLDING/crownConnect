@@ -59,6 +59,7 @@ export default function BookSeller() {
     [sending, setSending] = useState(false),
     [message, setMessage] = useState(''),
     [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [step, setStep] = useState(1), [serviceId, setServiceId] = useState(''), [selectedTime, setSelectedTime] = useState(''), [includeProducts, setIncludeProducts] = useState(false), [payment, setPayment] = useState<'deposit'|'full'>('deposit');
   const days = details?.seller.availability_days.split(',') ?? [];
   const weekday = useMemo(
     () =>
@@ -156,6 +157,10 @@ export default function BookSeller() {
       </>
     );
   const { seller, services, media } = details;
+  const selectedService = services.find(service => service.id === serviceId) ?? services[0];
+  const stylingPrice = selectedService?.price ?? seller.service_price;
+  const productPrice = includeProducts ? 269.97 : 0;
+  const paymentAmount = payment === 'deposit' ? Math.max(100, Math.round(stylingPrice * .25)) : stylingPrice + productPrice;
   return (
     <>
       <PortalHeader portal="customer" />
@@ -225,7 +230,7 @@ export default function BookSeller() {
             </div>
           </section>
           <section className="panel">
-            <h2>Choose a date and time</h2>
+            <h2>Book this look</h2>
             {signedIn === false ? (
               <div className="notice">
                 Please{' '}
@@ -241,78 +246,23 @@ export default function BookSeller() {
                 before booking.
               </div>
             ) : (
-              <form className="form-grid" onSubmit={submit}>
+              <form className="booking-wizard" onSubmit={submit}>
+                <div className="booking-progress">{['Style','Stylist','Date','Time','Products','Payment','Confirm'].map((label,index)=><button type="button" className={step >= index+1 ? 'active' : ''} onClick={()=>index+1 < step && setStep(index+1)} key={label}><span>{index+1}</span><small>{label}</small></button>)}</div>
                 <div className="field full service-summary">
                   <strong>Booking as {account.full_name}</strong>
                   <p>
                     {account.phone} · <Link href="/account">Edit account</Link>
                   </p>
                 </div>
-                <label className="field full">
-                  Service
-                  <select name="serviceId">
-                    {services.length ? (
-                      services.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.name} · R
-                          {service.price.toLocaleString('en-ZA')} ·{' '}
-                          {service.duration_minutes} min
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">{seller.featured_service}</option>
-                    )}
-                  </select>
-                </label>
-                <label className="field">
-                  Preferred date
-                  <input
-                    type="date"
-                    min={today()}
-                    value={date}
-                    onChange={(event) => setDate(event.target.value)}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  Preferred time
-                  <select
-                    name="appointmentTime"
-                    required
-                    disabled={!date || !available}
-                  >
-                    <option value="">Choose a time</option>
-                    {slots.map((time) => (
-                      <option
-                        key={time}
-                        value={time}
-                        disabled={taken.includes(time)}
-                      >
-                        {time}
-                        {taken.includes(time) ? ' — requested' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {date && !available && (
-                  <p className="availability-warning">
-                    This stylist is unavailable on {weekday}.
-                  </p>
-                )}
-                <label className="field full">
-                  Notes
-                  <textarea
-                    name="notes"
-                    maxLength={500}
-                    placeholder="Style details or questions for the stylist"
-                  />
-                </label>
-                <button
-                  className="button"
-                  disabled={sending || !date || !available}
-                >
-                  {sending ? 'Sending…' : 'Send booking request'}
-                </button>
+                <input type="hidden" name="serviceId" value={serviceId || selectedService?.id || ''}/><input type="hidden" name="appointmentTime" value={selectedTime}/>
+                {step === 1 && <section className="wizard-step"><p className="kicker">STEP 1</p><h3>Choose a hairstyle or service</h3><div className="choice-cards">{services.length ? services.map(service=><button type="button" className={(serviceId || services[0]?.id) === service.id ? 'selected' : ''} onClick={()=>setServiceId(service.id)} key={service.id}><span><strong>{service.name}</strong><small>{service.duration_minutes} minutes</small></span><b>R{service.price}</b></button>) : <button type="button" className="selected"><span><strong>{seller.featured_service}</strong><small>Stylist consultation included</small></span><b>R{seller.service_price}</b></button>}</div></section>}
+                {step === 2 && <section className="wizard-step"><p className="kicker">STEP 2</p><h3>Your stylist</h3><div className="chosen-stylist"><span className="profile-avatar">♛</span><div><strong>{seller.business_name}</strong><p>★ 4.9 · {seller.city} · Verified professional</p></div></div><p className="muted">This look is connected to its original CrownConnect stylist.</p></section>}
+                {step === 3 && <section className="wizard-step"><p className="kicker">STEP 3</p><h3>Choose your date</h3><input type="date" min={today()} value={date} onChange={event=>{setDate(event.target.value);setSelectedTime('')}} required/>{date&&!available&&<p className="availability-warning">This stylist is unavailable on {weekday}.</p>}<p className="muted">Available: {days.join(', ')}</p></section>}
+                {step === 4 && <section className="wizard-step"><p className="kicker">STEP 4</p><h3>Choose an available time</h3><div className="time-slots">{slots.map(time=><button type="button" disabled={taken.includes(time)} className={selectedTime===time?'selected':''} onClick={()=>setSelectedTime(time)} key={time}>{time}{taken.includes(time)&&<small>Requested</small>}</button>)}</div></section>}
+                {step === 5 && <section className="wizard-step"><p className="kicker">STEP 5</p><h3>Add the required hair</h3><label className={`product-choice ${includeProducts?'selected':''}`}><input type="checkbox" checked={includeProducts} onChange={event=>setIncludeProducts(event.target.checked)}/><span className="product-thumb cell-6"/><span><strong>3 × X-Pression Ultra Braid</strong><small>Recommended for this look</small></span><b>R269.97</b></label><button type="button" className="skip-link" onClick={()=>setIncludeProducts(false)}>I’ll bring my own hair</button></section>}
+                {step === 6 && <section className="wizard-step"><p className="kicker">STEP 6</p><h3>Choose how to pay</h3><div className="payment-choices"><button type="button" className={payment==='deposit'?'selected':''} onClick={()=>setPayment('deposit')}><strong>Pay a deposit</strong><span>Secure the appointment now</span><b>R{Math.max(100,Math.round(stylingPrice*.25))}</b></button><button type="button" className={payment==='full'?'selected':''} onClick={()=>setPayment('full')}><strong>Pay in full</strong><span>Styling {includeProducts?'and products':''}</span><b>R{(stylingPrice+productPrice).toFixed(2)}</b></button></div></section>}
+                {step === 7 && <section className="wizard-step"><p className="kicker">STEP 7</p><h3>Review and confirm</h3><div className="price-summary"><div><span>{selectedService?.name ?? seller.featured_service}</span><strong>R{stylingPrice.toFixed(2)}</strong></div>{includeProducts&&<div><span>Required hair products</span><strong>R{productPrice.toFixed(2)}</strong></div>}<div><span>Booking protection</span><strong>Included</strong></div><div className="total"><span>Due now ({payment})</span><strong>R{paymentAmount.toFixed(2)}</strong></div></div><label>Notes for your stylist<textarea name="notes" maxLength={500} placeholder="Anything your stylist should know?"/></label><button className="cc-button full" disabled={sending}>{sending?'Confirming…':'Confirm booking request'}</button></section>}
+                <div className="wizard-nav">{step>1&&<button type="button" className="cc-button outline" onClick={()=>setStep(step-1)}>Back</button>}{step<7&&<button type="button" className="cc-button" disabled={(step===3&&(!date||!available))||(step===4&&!selectedTime)} onClick={()=>setStep(step+1)}>Continue</button>}</div>
                 {message && <p role="status">{message}</p>}
               </form>
             )}

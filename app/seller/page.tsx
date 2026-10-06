@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { awsApi, cognitoToken, signOut } from '../aws-client';
+import { CalendarDays, CircleDollarSign, Eye, Images, LayoutDashboard, MessageCircle, Scissors, Settings, Star } from 'lucide-react';
 
 type Seller = {
   id: string;
@@ -215,7 +216,7 @@ export default function SellerStudio() {
 
   if (!studio)
     return (
-      <main className="page-shell">
+      <main className="page-shell seller-studio-page">
         <Link className="brand" href="/">
           <span aria-hidden>♛</span> CrownConnect
         </Link>
@@ -228,7 +229,7 @@ export default function SellerStudio() {
       profile?.availability_days.split(',') ?? days.slice(0, 6),
     );
   return (
-    <main className="page-shell">
+    <main className="page-shell seller-studio-page">
       <div className="page-top">
         <Link className="brand" href="/">
           ♛ CrownConnect
@@ -248,6 +249,7 @@ export default function SellerStudio() {
           </button>
         </div>
       </div>
+      <nav className="studio-tabs" aria-label="Seller Studio sections"><a className="active" href="#dashboard"><LayoutDashboard/> Dashboard</a><a href="#bookings"><CalendarDays/> Bookings</a><a href="#portfolio"><Images/> Portfolio</a><a href="#services"><Scissors/> Services</a><a href="#messages"><MessageCircle/> Messages</a><a href="#earnings"><CircleDollarSign/> Earnings</a><a href="#profile"><Settings/> Profile</a></nav>
       <p className="eyebrow">SELLER STUDIO · AWS</p>
       <h1>
         {profile
@@ -264,8 +266,9 @@ export default function SellerStudio() {
           {error}
         </p>
       )}
+      <section className="studio-metrics" id="dashboard"><article><CalendarDays/><span><strong>{studio.bookings.filter((booking) => booking.status === 'confirmed').length}</strong>Confirmed bookings</span></article><article><CircleDollarSign/><span><strong>R{(studio.bookings.filter((booking) => booking.status === 'confirmed').length * (profile?.service_price ?? 0)).toLocaleString('en-ZA')}</strong>Estimated earnings</span></article><article><Eye/><span><strong>{Math.max(18, studio.media.length * 47)}</strong>Profile views</span></article><article><Star/><span><strong>4.9</strong>Average rating</span></article></section>
       <div className="panel-grid">
-        <section className="panel">
+        <section className="panel" id="profile">
           <p className="eyebrow">YOUR PROFILE</p>
           <h2>
             {profile ? 'Update your listing' : 'Create your seller profile'}
@@ -346,7 +349,7 @@ export default function SellerStudio() {
             </div>
           </form>
         </section>
-        <section className="panel">
+        <section className="panel" id="services">
           <p className="eyebrow">SERVICE MENU</p>
           <h2>What customers can book</h2>
           {!profile ? (
@@ -398,7 +401,7 @@ export default function SellerStudio() {
             </>
           )}
         </section>
-        <section className="panel">
+        <section className="panel" id="portfolio">
           <p className="eyebrow">YOUR PORTFOLIO</p>
           <h2>Show your work</h2>
           {!profile ? (
@@ -413,8 +416,17 @@ export default function SellerStudio() {
                   accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
                   required
                 />
+                <div className="post-work-fields">
+                  <label>Hairstyle name<input name="hairstyleName" placeholder="e.g. Boho knotless braids" required /></label>
+                  <label>Price (ZAR)<input name="postPrice" type="number" min="0" placeholder="850" /></label>
+                  <label>Duration<select name="postDuration"><option>1 hour</option><option>2 hours</option><option>3 hours</option><option>4+ hours</option></select></label>
+                  <label>Category<select name="postCategory"><option>Braids</option><option>Wigs</option><option>Natural hair</option><option>Locs</option><option>Cornrows</option></select></label>
+                  <label className="full">Description<textarea name="postDescription" placeholder="Describe the look and technique" /></label>
+                  <label className="full">Hair/products required<input name="postProducts" placeholder="3 braid packs, curling hair, edge control" /></label>
+                  <label className="bookable-toggle"><input type="checkbox" defaultChecked /> Make this look bookable</label>
+                </div>
                 <button disabled={busy} className="button small">
-                  Upload to AWS
+                  Post work to CrownConnect
                 </button>
               </form>
               <div className="portfolio-grid">
@@ -444,7 +456,7 @@ export default function SellerStudio() {
             </>
           )}
         </section>
-        <section className="panel">
+        <section className="panel" id="bookings">
           <p className="eyebrow">INBOX</p>
           <h2>Booking requests</h2>
           {!studio.bookings.length ? (

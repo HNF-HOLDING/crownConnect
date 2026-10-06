@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Heart, MapPin, Play, ShoppingBag, Star } from 'lucide-react';
 import { useState } from 'react';
 import { looks, products, stylists } from './marketplace-data';
+import { useCart } from './cart';
 
 export function EditorialImage({ cell, className = '' }: { cell: number; className?: string }) {
   return <div className={`editorial-image cell-${cell} ${className}`} aria-label="CrownConnect hairstyle inspiration" />;
@@ -23,8 +24,8 @@ export function HairstyleCard({ look = looks[0] }: { look?: (typeof looks)[numbe
 }
 
 export function ProductCard({ product = products[0] }: { product?: (typeof products)[number] }) {
-  const [added, setAdded] = useState(false);
-  return <article className="product-card"><Link href={`/shop/${product.id}`}><EditorialImage cell={product.cell}/></Link><small>{product.category}</small><Link href={`/shop/${product.id}`}><h3>{product.name}</h3></Link><Rating value={product.rating}/><div className="product-buy"><strong>R{product.price.toFixed(2)}</strong><button onClick={() => setAdded(true)} aria-label={`Add ${product.name} to cart`}><ShoppingBag size={17}/>{added ? 'Added' : 'Add'}</button></div></article>;
+  const { add } = useCart();
+  return <article className="product-card"><Link href={`/shop/${product.id}`}><EditorialImage cell={product.cell}/></Link><small>{product.category}</small><Link href={`/shop/${product.id}`}><h3>{product.name}</h3></Link><Rating value={product.rating}/><div className="product-buy"><strong>R{product.price.toFixed(2)}</strong><button onClick={() => add(product.id)} aria-label={`Add ${product.name} to cart`}><ShoppingBag size={17}/>Add</button></div></article>;
 }
 
 export function StylistCard({ stylist = stylists[0] }: { stylist?: (typeof stylists)[number] }) {
