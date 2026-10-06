@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { awsApi, cognitoToken, signOut } from '../aws-client';
+import { PortalHeader } from '../portal-header';
 
 type Booking = {
   id: string;
@@ -24,7 +25,7 @@ export default function MyBookings() {
   const load = useCallback(async () => {
     try {
       if (!(await cognitoToken())) {
-        window.location.href = '/sign-in?next=/my-bookings';
+        window.location.href = '/sign-in?portal=customer&next=/my-bookings';
         return;
       }
       const response = await awsApi('/bookings'),
@@ -57,81 +58,81 @@ export default function MyBookings() {
     await load();
   }
   return (
-    <main className="page-shell">
-      <div className="page-top">
-        <Link className="brand" href="/">
-          ♛ CrownConnect
-        </Link>
-        <div className="inline-actions">
-          <Link className="button ghost small" href="/marketplace">
-            Marketplace
+    <>
+      <PortalHeader portal="customer" />
+      <main className="page-shell">
+        <div className="page-top">
+          <Link className="brand" href="/customer">
+            ♛ Customer space
           </Link>
-          <Link className="button ghost small" href="/seller">
-            Seller Studio
-          </Link>
-          <button
-            className="button ghost small"
-            onClick={async () => {
-              await signOut();
-              window.location.href = '/';
-            }}
-          >
-            Sign out
-          </button>
+          <div className="inline-actions">
+            <Link className="button ghost small" href="/marketplace">
+              Marketplace
+            </Link>
+            <button
+              className="button ghost small"
+              onClick={async () => {
+                await signOut();
+                window.location.href = '/customer';
+              }}
+            >
+              Sign out
+            </button>
+          </div>
         </div>
-      </div>
-      <p className="eyebrow">CUSTOMER SPACE · AWS</p>
-      <h1>Your booking requests.</h1>
-      {notice && <p className="notice">{notice}</p>}
-      {error && (
-        <p className="notice" role="alert">
-          {error}
-        </p>
-      )}
-      {loading ? (
-        <div className="empty">Loading bookings…</div>
-      ) : !bookings.length ? (
-        <div className="empty">
-          No requests yet. Browse local stylists to get started.
-        </div>
-      ) : (
-        <section className="booking-list">
-          {bookings.map((booking) => (
-            <article className="booking" key={booking.id}>
-              <div className="booking-head">
-                <div>
-                  <h2>{booking.business_name}</h2>
-                  <p>
-                    {booking.service_name}
-                    <br />
-                    {booking.appointment_date} at {booking.appointment_time} ·{' '}
-                    {booking.city}
-                  </p>
+        <p className="eyebrow">CUSTOMER SPACE · AWS</p>
+        <h1>Your booking requests.</h1>
+        {notice && <p className="notice">{notice}</p>}
+        {error && (
+          <p className="notice" role="alert">
+            {error}
+          </p>
+        )}
+        {loading ? (
+          <div className="empty">Loading bookings…</div>
+        ) : !bookings.length ? (
+          <div className="empty">
+            No requests yet. Browse local stylists to get started.
+          </div>
+        ) : (
+          <section className="booking-list">
+            {bookings.map((booking) => (
+              <article className="booking" key={booking.id}>
+                <div className="booking-head">
+                  <div>
+                    <h2>{booking.business_name}</h2>
+                    <p>
+                      {booking.service_name}
+                      <br />
+                      {booking.appointment_date} at {booking.appointment_time} ·{' '}
+                      {booking.city}
+                    </p>
+                  </div>
+                  <span className={`status ${booking.status}`}>
+                    {booking.status}
+                  </span>
                 </div>
-                <span className={`status ${booking.status}`}>
-                  {booking.status}
-                </span>
-              </div>
-              <p>
-                Seller phone: {booking.seller_phone}
-                {booking.notes && (
-                  <>
-                    <br />“{booking.notes}”
-                  </>
+                <p>
+                  Seller phone: {booking.seller_phone}
+                  {booking.notes && (
+                    <>
+                      <br />“{booking.notes}”
+                    </>
+                  )}
+                </p>
+                {['pending', 'confirmed'].includes(booking.status) && (
+                  <button
+                    className="button ghost small"
+                    onClick={() => void cancel(booking.id)}
+                  >
+                    Cancel booking
+                  </button>
                 )}
-              </p>
-              {['pending', 'confirmed'].includes(booking.status) && (
-                <button
-                  className="button ghost small"
-                  onClick={() => void cancel(booking.id)}
-                >
-                  Cancel booking
-                </button>
-              )}
-            </article>
-          ))}
-        </section>
-      )}
-    </main>
+              </article>
+            ))}
+          </section>
+        )}
+      </main>
+    </>
   );
 }

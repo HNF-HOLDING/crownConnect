@@ -54,11 +54,11 @@ export function AwsMarketplace() {
         <div className="marketplace-empty-state" role="status">
           <h2>No stylists available yet</h2>
           <p>
-            The marketplace is still being populated. Sign up as a seller to
-            join the next wave of local talent.
+            The marketplace is still being populated. Please check again soon
+            for new local stylists and services.
           </p>
-          <Link className="button" href="/sign-in?mode=signup">
-            Become a seller
+          <Link className="button" href="/products">
+            Browse hair products
           </Link>
         </div>
       </main>

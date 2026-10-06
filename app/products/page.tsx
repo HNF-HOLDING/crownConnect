@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { SiteHeader } from '../site-header';
+import { PortalHeader } from '../portal-header';
 const categories = [
   {
     name: 'Braiding hair',
@@ -25,7 +25,7 @@ const categories = [
 export default function ProductsPage() {
   return (
     <>
-      <SiteHeader />
+      <PortalHeader portal="customer" />
       <main className="products-page">
         <section className="products-intro">
           <p className="eyebrow">HAIR PRODUCTS</p>
@@ -45,7 +45,7 @@ export default function ProductsPage() {
               <p className="eyebrow">SHOP CATEGORY</p>
               <h2>{category.name}</h2>
               <p>{category.description}</p>
-              <span>Seller products coming soon</span>
+              <span>Products coming soon</span>
             </article>
           ))}
         </section>
@@ -58,8 +58,8 @@ export default function ProductsPage() {
             <Link className="button" href="/marketplace">
               Book a stylist
             </Link>
-            <Link className="button secondary" href="/sign-in?mode=signup">
-              Become a seller
+            <Link className="button secondary" href="/customer">
+              Customer home
             </Link>
           </div>
         </section>

@@ -15,13 +15,17 @@ describe('AwsMarketplace', () => {
     render(<AwsMarketplace />);
 
     await waitFor(() => {
-      expect(screen.getByText(/no stylists available yet/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/no stylists available yet/i),
+      ).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('link', { name: /become a seller/i })).toHaveAttribute(
-      'href',
-      '/sign-in?mode=signup',
-    );
+    expect(
+      screen.getByRole('link', { name: /browse hair products/i }),
+    ).toHaveAttribute('href', '/products');
+    expect(
+      screen.queryByRole('link', { name: /become a seller/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows trusted local-style context and clear city location on seller cards', async () => {

@@ -10,6 +10,7 @@ import {
   signUp,
 } from '@/app/aws-client';
 import { SiteHeader } from '../site-header';
+import { PortalHeader } from '../portal-header';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
@@ -99,7 +100,11 @@ export default function SignInPage() {
   const verification = step !== 'form';
   return (
     <>
-      <SiteHeader />
+      {portal === 'customer' ? (
+        <PortalHeader portal="customer" />
+      ) : (
+        <SiteHeader />
+      )}
       <main className="register-page">
         <div className="auth-back">
           <Link href="/">← Back to home</Link>

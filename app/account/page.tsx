@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { awsApi, cognitoToken, signOut } from '../aws-client';
+import { PortalHeader } from '../portal-header';
 
 type Account = {
   email: string;
@@ -85,173 +86,175 @@ export default function AccountPage() {
       </main>
     );
   return (
-    <main className="register-page">
-      <div className="page-top">
-        <Link className="brand" href="/">
-          ♛ CrownConnect
-        </Link>
-        <button
-          className="button ghost small"
-          onClick={async () => {
-            await signOut();
-            window.location.href = '/';
-          }}
-        >
-          Sign out
-        </button>
-      </div>
-      <div className="register-card">
-        <p className="eyebrow">YOUR ACCOUNT</p>
-        <h1>{account ? 'Review your details' : 'Complete your profile'}</h1>
-        <p>
-          We only ask for details needed to manage bookings and help you find
-          services. Your email comes from your verified Cognito identity.
-        </p>
-        {account && (
-          <div className="seller-onboarding-callout" role="status">
-            {isSeller ? (
-              <>
-                <strong>You’re ready for Seller Studio.</strong>
-                <span>
-                  Add services, upload your portfolio, and manage bookings from
-                  one place.
-                </span>
-              </>
-            ) : (
-              <>
-                <strong>Customer mode is active.</strong>
-                <span>
-                  Browse stylists, compare services, and manage your booking
-                  requests in one place.
-                </span>
-              </>
-            )}
-          </div>
-        )}
-        <form className="registration-form" onSubmit={save}>
-          <input
-            type="hidden"
-            name="role"
-            value={isSeller ? 'seller' : 'customer'}
-          />
-          {!isSeller && (
-            <div className="selected-role">
-              <strong>Customer account</strong>
-              <br />
-              Want to provide services?{' '}
-              <Link href="/pro/apply">Apply through CrownConnect Pro</Link>.
-              Professional access requires approval.
+    <>
+      <PortalHeader portal={isSeller ? 'pro' : 'customer'} />
+      <main className="register-page">
+        <div className="page-top">
+          <Link className="brand" href={isSeller ? '/pro' : '/customer'}>
+            ♛ {isSeller ? 'Professional account' : 'Customer account'}
+          </Link>
+          <button
+            className="button ghost small"
+            onClick={async () => {
+              await signOut();
+              window.location.href = isSeller ? '/pro' : '/customer';
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+        <div className="register-card">
+          <p className="eyebrow">YOUR ACCOUNT</p>
+          <h1>{account ? 'Review your details' : 'Complete your profile'}</h1>
+          <p>
+            We only ask for details needed to manage bookings and help you find
+            services. Your email comes from your verified Cognito identity.
+          </p>
+          {account && (
+            <div className="seller-onboarding-callout" role="status">
+              {isSeller ? (
+                <>
+                  <strong>You’re ready for Seller Studio.</strong>
+                  <span>
+                    Add services, upload your portfolio, and manage bookings
+                    from one place.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <strong>Customer mode is active.</strong>
+                  <span>
+                    Browse stylists, compare services, and manage your booking
+                    requests in one place.
+                  </span>
+                </>
+              )}
             </div>
           )}
-          <label>
-            Full name
+          <form className="registration-form" onSubmit={save}>
             <input
-              name="fullName"
-              autoComplete="name"
-              required
-              maxLength={100}
-              defaultValue={account?.full_name || identityName}
+              type="hidden"
+              name="role"
+              value={isSeller ? 'seller' : 'customer'}
             />
-          </label>
-          <label>
-            Mobile or WhatsApp number
-            <input
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              required
-              maxLength={30}
-              placeholder="e.g. 076 000 0000"
-              defaultValue={account?.phone}
-            />
-          </label>
-          <div className="form-grid">
-            <label className="field">
-              Town or city
+            {!isSeller && (
+              <div className="selected-role">
+                <strong>Customer account</strong>
+                <br />
+                Your account is set up for discovering services, booking local
+                stylists, and managing appointments.
+              </div>
+            )}
+            <label>
+              Full name
               <input
-                name="city"
-                autoComplete="address-level2"
+                name="fullName"
+                autoComplete="name"
                 required
-                maxLength={80}
-                defaultValue={account?.city}
+                maxLength={100}
+                defaultValue={account?.full_name || identityName}
               />
             </label>
-            <label className="field">
-              Province
-              <select
-                name="province"
-                autoComplete="address-level1"
+            <label>
+              Mobile or WhatsApp number
+              <input
+                name="phone"
+                type="tel"
+                autoComplete="tel"
                 required
-                defaultValue={account?.province || ''}
-              >
-                <option value="" disabled>
-                  Select province
-                </option>
-                {provinces.map((province) => (
-                  <option key={province}>{province}</option>
-                ))}
-              </select>
+                maxLength={30}
+                placeholder="e.g. 076 000 0000"
+                defaultValue={account?.phone}
+              />
             </label>
-          </div>
-          <label className="registration-choice">
-            <input
-              type="checkbox"
-              name="marketingConsent"
-              defaultChecked={account?.marketing_consent}
-            />
-            <span>
-              <strong>Product updates (optional)</strong>
-              <small>
-                Email me occasional CrownConnect news. Booking messages are not
-                affected.
-              </small>
-            </span>
-          </label>
-          {!account?.terms_accepted && (
+            <div className="form-grid">
+              <label className="field">
+                Town or city
+                <input
+                  name="city"
+                  autoComplete="address-level2"
+                  required
+                  maxLength={80}
+                  defaultValue={account?.city}
+                />
+              </label>
+              <label className="field">
+                Province
+                <select
+                  name="province"
+                  autoComplete="address-level1"
+                  required
+                  defaultValue={account?.province || ''}
+                >
+                  <option value="" disabled>
+                    Select province
+                  </option>
+                  {provinces.map((province) => (
+                    <option key={province}>{province}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <label className="registration-choice">
-              <input type="checkbox" name="termsAccepted" required />
+              <input
+                type="checkbox"
+                name="marketingConsent"
+                defaultChecked={account?.marketing_consent}
+              />
               <span>
-                <strong>I agree to the terms</strong>
+                <strong>Product updates (optional)</strong>
                 <small>
-                  I have read the <Link href="/terms">Terms</Link> and{' '}
-                  <Link href="/privacy">Privacy Notice</Link>.
+                  Email me occasional CrownConnect news. Booking messages are
+                  not affected.
                 </small>
               </span>
             </label>
+            {!account?.terms_accepted && (
+              <label className="registration-choice">
+                <input type="checkbox" name="termsAccepted" required />
+                <span>
+                  <strong>I agree to the terms</strong>
+                  <small>
+                    I have read the <Link href="/terms">Terms</Link> and{' '}
+                    <Link href="/privacy">Privacy Notice</Link>.
+                  </small>
+                </span>
+              </label>
+            )}
+            <button className="button" disabled={saving}>
+              {saving
+                ? 'Saving…'
+                : account
+                  ? 'Save changes'
+                  : 'Create my account'}
+            </button>
+          </form>
+          {message && (
+            <p className="notice" role="status">
+              {message}
+            </p>
           )}
-          <button className="button" disabled={saving}>
-            {saving
-              ? 'Saving…'
-              : account
-                ? 'Save changes'
-                : 'Create my account'}
-          </button>
-        </form>
-        {message && (
-          <p className="notice" role="status">
-            {message}
-          </p>
-        )}
-        {account && (
-          <div className="customer-actions">
-            <Link
-              className="button"
-              href={
-                account.primary_role === 'seller'
-                  ? '/pro/dashboard'
-                  : '/customer'
-              }
-            >
-              {account.primary_role === 'seller'
-                ? 'Continue to CrownConnect Pro'
-                : 'Open Customer space'}
-            </Link>
-            <Link className="button ghost" href="/my-bookings">
-              My bookings
-            </Link>
-          </div>
-        )}
-      </div>
-    </main>
+          {account && (
+            <div className="customer-actions">
+              <Link
+                className="button"
+                href={
+                  account.primary_role === 'seller'
+                    ? '/pro/dashboard'
+                    : '/customer'
+                }
+              >
+                {account.primary_role === 'seller'
+                  ? 'Continue to CrownConnect Pro'
+                  : 'Open Customer space'}
+              </Link>
+              <Link className="button ghost" href="/my-bookings">
+                My bookings
+              </Link>
+            </div>
+          )}
+        </div>
+      </main>
+    </>
   );
 }

@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiUrl, awsApi, cognitoToken } from '@/app/aws-client';
 import { googleMapsDirections, googleMapsSearch } from '@/app/google-maps';
+import { PortalHeader } from '@/app/portal-header';
 
 type Seller = {
   id: string;
@@ -137,181 +138,187 @@ export default function BookSeller() {
   }
   if (loading)
     return (
-      <main className="page-shell">
-        <Link className="brand" href="/">
-          <span aria-hidden>♛</span> CrownConnect
-        </Link>
-        <p>Loading stylist…</p>
-      </main>
+      <>
+        <PortalHeader portal="customer" />
+        <main className="page-shell">
+          <p>Loading stylist…</p>
+        </main>
+      </>
     );
   if (!details)
     return (
-      <main className="page-shell">
-        <Link className="brand" href="/">
-          <span aria-hidden>♛</span> CrownConnect
-        </Link>
-        <p>{message || 'Seller not found.'}</p>
-        <Link href="/marketplace">Back to marketplace</Link>
-      </main>
+      <>
+        <PortalHeader portal="customer" />
+        <main className="page-shell">
+          <p>{message || 'Stylist not found.'}</p>
+          <Link href="/marketplace">Back to marketplace</Link>
+        </main>
+      </>
     );
   const { seller, services, media } = details;
   return (
-    <main className="page-shell">
-      <div className="page-top">
-        <Link className="brand" href="/">
-          ♛ CrownConnect
-        </Link>
-        <Link href="/marketplace">Back to marketplace</Link>
-      </div>
-      <div className="panel-grid">
-        <section>
-          <p className="eyebrow">BOOK {seller.business_name.toUpperCase()}</p>
-          <h1>Request your next appointment.</h1>
-          <p>{seller.bio}</p>
-          <div className="service-summary">
-            <strong>{seller.featured_service}</strong>
-            <p>
-              From R{seller.service_price.toLocaleString('en-ZA')} ·{' '}
-              {seller.city}
-            </p>
-          </div>
-          {media.length > 0 && (
-            <section className="customer-portfolio">
-              <h2>Recent work</h2>
-              <div className="portfolio-grid">
-                {media.map((item) =>
-                  item.media_type === 'image' ? (
-                    <img
-                      key={item.id}
-                      src={item.url}
-                      alt={`${seller.business_name}: ${item.file_name}`}
-                    />
-                  ) : (
-                    <video key={item.id} controls>
-                      <source src={item.url} type={item.content_type} />
-                    </video>
-                  ),
-                )}
-              </div>
-            </section>
-          )}
-          <p>
-            <strong>Available:</strong> {days.join(', ')}.
-          </p>
-          <div className="map-actions">
-            <a
-              className="button ghost small"
-              href={googleMapsSearch(
-                `${seller.business_name}, ${seller.city}, South Africa`,
-              )}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View area on Google Maps
-            </a>
-            <a
-              className="maps-link"
-              href={googleMapsDirections(
-                `${seller.business_name}, ${seller.city}, South Africa`,
-              )}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Get directions ↗
-            </a>
-          </div>
-        </section>
-        <section className="panel">
-          <h2>Choose a date and time</h2>
-          {signedIn === false ? (
-            <div className="notice">
-              Please{' '}
-              <Link href={`/sign-in?next=/book/${id}`}>sign in securely</Link>{' '}
-              before booking.
+    <>
+      <PortalHeader portal="customer" />
+      <main className="page-shell">
+        <div className="page-top">
+          <Link className="brand" href="/customer">
+            ♛ Customer space
+          </Link>
+          <Link href="/marketplace">Back to marketplace</Link>
+        </div>
+        <div className="panel-grid">
+          <section>
+            <p className="eyebrow">BOOK {seller.business_name.toUpperCase()}</p>
+            <h1>Request your next appointment.</h1>
+            <p>{seller.bio}</p>
+            <div className="service-summary">
+              <strong>{seller.featured_service}</strong>
+              <p>
+                From R{seller.service_price.toLocaleString('en-ZA')} ·{' '}
+                {seller.city}
+              </p>
             </div>
-          ) : !account?.full_name || !account.phone ? (
-            <div className="notice">
-              Please <Link href="/account">complete your customer profile</Link>{' '}
-              before booking.
-            </div>
-          ) : (
-            <form className="form-grid" onSubmit={submit}>
-              <div className="field full service-summary">
-                <strong>Booking as {account.full_name}</strong>
-                <p>
-                  {account.phone} · <Link href="/account">Edit account</Link>
-                </p>
-              </div>
-              <label className="field full">
-                Service
-                <select name="serviceId">
-                  {services.length ? (
-                    services.map((service) => (
-                      <option key={service.id} value={service.id}>
-                        {service.name} · R
-                        {service.price.toLocaleString('en-ZA')} ·{' '}
-                        {service.duration_minutes} min
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">{seller.featured_service}</option>
+            {media.length > 0 && (
+              <section className="customer-portfolio">
+                <h2>Recent work</h2>
+                <div className="portfolio-grid">
+                  {media.map((item) =>
+                    item.media_type === 'image' ? (
+                      <img
+                        key={item.id}
+                        src={item.url}
+                        alt={`${seller.business_name}: ${item.file_name}`}
+                      />
+                    ) : (
+                      <video key={item.id} controls>
+                        <source src={item.url} type={item.content_type} />
+                      </video>
+                    ),
                   )}
-                </select>
-              </label>
-              <label className="field">
-                Preferred date
-                <input
-                  type="date"
-                  min={today()}
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                  required
-                />
-              </label>
-              <label className="field">
-                Preferred time
-                <select
-                  name="appointmentTime"
-                  required
-                  disabled={!date || !available}
-                >
-                  <option value="">Choose a time</option>
-                  {slots.map((time) => (
-                    <option
-                      key={time}
-                      value={time}
-                      disabled={taken.includes(time)}
-                    >
-                      {time}
-                      {taken.includes(time) ? ' — requested' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {date && !available && (
-                <p className="availability-warning">
-                  This stylist is unavailable on {weekday}.
-                </p>
-              )}
-              <label className="field full">
-                Notes
-                <textarea
-                  name="notes"
-                  maxLength={500}
-                  placeholder="Style details or questions for the stylist"
-                />
-              </label>
-              <button
-                className="button"
-                disabled={sending || !date || !available}
+                </div>
+              </section>
+            )}
+            <p>
+              <strong>Available:</strong> {days.join(', ')}.
+            </p>
+            <div className="map-actions">
+              <a
+                className="button ghost small"
+                href={googleMapsSearch(
+                  `${seller.business_name}, ${seller.city}, South Africa`,
+                )}
+                target="_blank"
+                rel="noreferrer"
               >
-                {sending ? 'Sending…' : 'Send booking request'}
-              </button>
-              {message && <p role="status">{message}</p>}
-            </form>
-          )}
-        </section>
-      </div>
-    </main>
+                View area on Google Maps
+              </a>
+              <a
+                className="maps-link"
+                href={googleMapsDirections(
+                  `${seller.business_name}, ${seller.city}, South Africa`,
+                )}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Get directions ↗
+              </a>
+            </div>
+          </section>
+          <section className="panel">
+            <h2>Choose a date and time</h2>
+            {signedIn === false ? (
+              <div className="notice">
+                Please{' '}
+                <Link href={`/sign-in?portal=customer&next=/book/${id}`}>
+                  sign in securely
+                </Link>{' '}
+                before booking.
+              </div>
+            ) : !account?.full_name || !account.phone ? (
+              <div className="notice">
+                Please{' '}
+                <Link href="/account">complete your customer profile</Link>{' '}
+                before booking.
+              </div>
+            ) : (
+              <form className="form-grid" onSubmit={submit}>
+                <div className="field full service-summary">
+                  <strong>Booking as {account.full_name}</strong>
+                  <p>
+                    {account.phone} · <Link href="/account">Edit account</Link>
+                  </p>
+                </div>
+                <label className="field full">
+                  Service
+                  <select name="serviceId">
+                    {services.length ? (
+                      services.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name} · R
+                          {service.price.toLocaleString('en-ZA')} ·{' '}
+                          {service.duration_minutes} min
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">{seller.featured_service}</option>
+                    )}
+                  </select>
+                </label>
+                <label className="field">
+                  Preferred date
+                  <input
+                    type="date"
+                    min={today()}
+                    value={date}
+                    onChange={(event) => setDate(event.target.value)}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  Preferred time
+                  <select
+                    name="appointmentTime"
+                    required
+                    disabled={!date || !available}
+                  >
+                    <option value="">Choose a time</option>
+                    {slots.map((time) => (
+                      <option
+                        key={time}
+                        value={time}
+                        disabled={taken.includes(time)}
+                      >
+                        {time}
+                        {taken.includes(time) ? ' — requested' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {date && !available && (
+                  <p className="availability-warning">
+                    This stylist is unavailable on {weekday}.
+                  </p>
+                )}
+                <label className="field full">
+                  Notes
+                  <textarea
+                    name="notes"
+                    maxLength={500}
+                    placeholder="Style details or questions for the stylist"
+                  />
+                </label>
+                <button
+                  className="button"
+                  disabled={sending || !date || !available}
+                >
+                  {sending ? 'Sending…' : 'Send booking request'}
+                </button>
+                {message && <p role="status">{message}</p>}
+              </form>
+            )}
+          </section>
+        </div>
+      </main>
+    </>
   );
 }
