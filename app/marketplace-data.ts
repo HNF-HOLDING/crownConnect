@@ -14,10 +14,10 @@ export const products = [
 ];
 
 export const stylists = [
-  { id: 1, name: 'Thando Hair Studio', location: 'Pretoria East', distance: '2.3 km', rating: 4.9, reviews: 127, price: 350, specialties: 'Braids · Cornrows', cell: 1 },
-  { id: 2, name: 'Lerato Styles', location: 'Sandton', distance: '4.7 km', rating: 4.8, reviews: 88, price: 450, specialties: 'Wigs · Silk press', cell: 2 },
-  { id: 3, name: 'Kea Beauty', location: 'Johannesburg', distance: '5.8 km', rating: 4.9, reviews: 210, price: 400, specialties: 'Locs · Natural hair', cell: 3 },
-  { id: 4, name: 'Nandi Hair Art', location: 'Pretoria North', distance: '6.2 km', rating: 4.6, reviews: 64, price: 300, specialties: 'Cornrows · Feed-in braids', cell: 4 },
+  { id: 1, name: 'Thando Hair Studio', location: 'Pretoria East', distance: '10.2 km', latitude: -25.7863, longitude: 28.3280, rating: 4.9, reviews: 127, price: 350, specialties: 'Braids · Cornrows', cell: 1 },
+  { id: 2, name: 'Lerato Styles', location: 'Sandton', distance: '47.8 km', latitude: -26.1076, longitude: 28.0567, rating: 4.8, reviews: 88, price: 450, specialties: 'Wigs · Silk press', cell: 2 },
+  { id: 3, name: 'Kea Beauty', location: 'Johannesburg', distance: '54.2 km', latitude: -26.2041, longitude: 28.0473, rating: 4.9, reviews: 210, price: 400, specialties: 'Locs · Natural hair', cell: 3 },
+  { id: 4, name: 'Nandi Hair Art', location: 'Pretoria North', distance: '7.1 km', latitude: -25.6736, longitude: 28.1756, rating: 4.6, reviews: 64, price: 300, specialties: 'Cornrows · Feed-in braids', cell: 4 },
 ];
 
 export const categories = ['Wigs', 'Braids', 'Bundles', 'Extensions', 'Hair care', 'Styling products', 'Natural hair', 'Find a stylist'];
