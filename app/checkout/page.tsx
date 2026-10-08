@@ -21,18 +21,21 @@ export default function CheckoutPage() {
     event.preventDefault();
     if (!lines.length || sending) return;
     setSending(true); setMessage('');
-    if (!(await cognitoToken())) {
-      window.location.href = '/sign-in?portal=customer&next=/checkout';
-      return;
-    }
-    const fields = new FormData(event.currentTarget);
-    const response = await awsApi('/orders', { method: 'POST', body: JSON.stringify({
-      fullName: fields.get('fullName'), phone: fields.get('phone'), streetAddress: fields.get('streetAddress'),
-      city: fields.get('city'), province: fields.get('province'), lines,
-    }) });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { setMessage(payload.error || 'Unable to reserve this order.'); setSending(false); return; }
-    setOrder(payload.order); clear(); setSending(false);
+    try {
+      const token = await Promise.race([cognitoToken(), new Promise<null>((_, reject) => window.setTimeout(() => reject(new Error('Authentication timed out')), 12000))]);
+      if (!token) { window.location.href = '/sign-in?portal=customer&next=/checkout'; return; }
+      const fields = new FormData(event.currentTarget);
+      const response = await awsApi('/orders', { method: 'POST', signal: AbortSignal.timeout(15000), body: JSON.stringify({
+        fullName: fields.get('fullName'), phone: fields.get('phone'), streetAddress: fields.get('streetAddress'),
+        city: fields.get('city'), province: fields.get('province'), lines,
+      }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) { setMessage(payload.error || 'Unable to reserve this order.'); return; }
+      setOrder(payload.order); clear();
+    } catch (cause) {
+      console.error(cause);
+      setMessage('Your secure session could not complete the order. Please sign in again and retry.');
+    } finally { setSending(false); }
   }
 
   if (order) return <><PortalHeader portal="customer"/><main className="checkout-success"><CheckCircle2/><p className="kicker">ORDER RESERVED</p><h1>Beautiful choice.</h1><p>Order <strong>{order.order_number}</strong> is saved securely. Its status is <strong>awaiting payment</strong>; no money has been charged.</p><p>We will enable payment only after the production payment provider and webhook verification are configured.</p><Link className="cc-button" href="/customer/dashboard#orders">View my orders</Link></main></>;
