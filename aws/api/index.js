@@ -51,6 +51,16 @@ async function readyDatabase() {
     CREATE INDEX IF NOT EXISTS idx_blocked_dates_seller_date ON seller_blocked_dates(seller_id, blocked_date);
     CREATE UNIQUE INDEX IF NOT EXISTS booking_active_slot ON booking_requests(seller_id, appointment_date, appointment_time) WHERE status IN ('pending', 'confirmed');
     CREATE INDEX IF NOT EXISTS idx_professional_applications_status ON professional_applications(status, submitted_at DESC);
+    CREATE TABLE IF NOT EXISTS products (sku TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', price_cents INTEGER NOT NULL CHECK (price_cents >= 0), stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS customer_orders (id BIGSERIAL PRIMARY KEY, order_number TEXT NOT NULL UNIQUE, customer_cognito_sub UUID NOT NULL REFERENCES account_profiles(cognito_sub) ON DELETE RESTRICT, customer_email TEXT NOT NULL, full_name TEXT NOT NULL, phone TEXT NOT NULL, street_address TEXT NOT NULL, city TEXT NOT NULL, province TEXT NOT NULL, subtotal_cents INTEGER NOT NULL CHECK (subtotal_cents >= 0), delivery_cents INTEGER NOT NULL CHECK (delivery_cents >= 0), total_cents INTEGER NOT NULL CHECK (total_cents >= 0), status TEXT NOT NULL DEFAULT 'awaiting_payment' CHECK (status IN ('awaiting_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded')), payment_reference TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS customer_order_items (id BIGSERIAL PRIMARY KEY, order_id BIGINT NOT NULL REFERENCES customer_orders(id) ON DELETE CASCADE, product_sku TEXT NOT NULL REFERENCES products(sku) ON DELETE RESTRICT, product_name TEXT NOT NULL, unit_price_cents INTEGER NOT NULL CHECK (unit_price_cents >= 0), quantity INTEGER NOT NULL CHECK (quantity > 0), line_total_cents INTEGER NOT NULL CHECK (line_total_cents >= 0));
+    CREATE INDEX IF NOT EXISTS idx_customer_orders_customer_created ON customer_orders(customer_cognito_sub, created_at DESC);
+    INSERT INTO products (sku, name, category, description, price_cents, stock_quantity) VALUES
+      ('xpression-braid', 'X-Pression Ultra Braid 1B', 'Braids', 'Pre-stretched professional braiding hair.', 8999, 100),
+      ('curl-ritual', 'Crown Curl Ritual Set', 'Hair care', 'A salon-quality cleansing and curl care set.', 42900, 40),
+      ('body-wave', 'Brazilian Body Wave Bundles', 'Bundles', 'Soft body-wave bundles for versatile installs.', 129900, 20),
+      ('edge-set', 'Silk Edge & Shine Set', 'Styling', 'Hold and shine essentials for a polished finish.', 24900, 50)
+    ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name, category = EXCLUDED.category, description = EXCLUDED.description, price_cents = EXCLUDED.price_cents, active = TRUE, updated_at = NOW();
     INSERT INTO professional_applications (cognito_sub, email, legal_name, business_name, phone, city, province, service_area, categories, years_experience, bio, status, reviewed_at, reviewed_by)
       SELECT s.cognito_sub, s.email, COALESCE(NULLIF(a.full_name, ''), s.business_name), s.business_name, s.phone, s.city, COALESCE(NULLIF(a.province, ''), 'Not provided'), s.city, s.specialty, 0, s.bio, 'approved', NOW(), 'legacy-migration'
       FROM seller_profiles s JOIN account_profiles a ON a.cognito_sub = s.cognito_sub
@@ -544,6 +554,62 @@ async function cancelCustomerBooking(event) {
   return json(200, { booking: result.rows[0] });
 }
 
+async function listProducts(event) {
+  const origin = arguments[1];
+  const result = await (await readyDatabase()).query(`SELECT sku AS id, name, category, description, price_cents, stock_quantity FROM products WHERE active = TRUE ORDER BY created_at, sku`);
+  return json(200, { products: result.rows.map((item) => ({ ...item, price: item.price_cents / 100, inStock: item.stock_quantity > 0 })) }, origin);
+}
+
+async function createOrder(event) {
+  const origin = arguments[1], user = claims(event), data = await body(event);
+  if (!user) return error(401, 'Sign in required');
+  const fullName = clean(data?.fullName, 120), phone = clean(data?.phone, 30), streetAddress = clean(data?.streetAddress, 240), city = clean(data?.city, 80), province = clean(data?.province, 80);
+  const requested = Array.isArray(data?.lines) ? data.lines.slice(0, 30) : [];
+  const quantities = new Map();
+  for (const line of requested) {
+    const sku = clean(line?.id, 80), quantity = Number(line?.quantity);
+    if (!sku || !Number.isInteger(quantity) || quantity < 1 || quantity > 20) return error(400, 'Every order item needs a valid quantity.');
+    quantities.set(sku, (quantities.get(sku) || 0) + quantity);
+  }
+  if (!fullName || !phone || !streetAddress || !city || !province || !quantities.size) return error(400, 'Complete the delivery details and add at least one product.');
+  const db = await readyDatabase(), client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`INSERT INTO account_profiles (cognito_sub, email, primary_role, full_name, phone, city, province) VALUES ($1::uuid, $2, 'customer', $3, $4, $5, $6) ON CONFLICT (cognito_sub) DO UPDATE SET email=EXCLUDED.email, full_name=EXCLUDED.full_name, phone=EXCLUDED.phone, city=EXCLUDED.city, province=EXCLUDED.province, updated_at=NOW()`, [user.sub, user.email, fullName, phone, city, province]);
+    const skus = [...quantities.keys()];
+    const products = await client.query(`SELECT sku, name, price_cents, stock_quantity FROM products WHERE sku = ANY($1::text[]) AND active = TRUE FOR UPDATE`, [skus]);
+    if (products.rowCount !== skus.length) { await client.query('ROLLBACK'); return error(409, 'One or more products are no longer available.'); }
+    let subtotalCents = 0;
+    for (const product of products.rows) {
+      const quantity = quantities.get(product.sku);
+      if (product.stock_quantity < quantity) { await client.query('ROLLBACK'); return error(409, `${product.name} does not have enough stock.`); }
+      subtotalCents += product.price_cents * quantity;
+    }
+    const deliveryCents = subtotalCents >= 100000 ? 0 : 7500, totalCents = subtotalCents + deliveryCents;
+    const orderNumber = `CC-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
+    const order = await client.query(`INSERT INTO customer_orders (order_number, customer_cognito_sub, customer_email, full_name, phone, street_address, city, province, subtotal_cents, delivery_cents, total_cents) VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, order_number, status, total_cents, created_at`, [orderNumber, user.sub, user.email, fullName, phone, streetAddress, city, province, subtotalCents, deliveryCents, totalCents]);
+    for (const product of products.rows) {
+      const quantity = quantities.get(product.sku), lineTotal = product.price_cents * quantity;
+      await client.query(`INSERT INTO customer_order_items (order_id, product_sku, product_name, unit_price_cents, quantity, line_total_cents) VALUES ($1, $2, $3, $4, $5, $6)`, [order.rows[0].id, product.sku, product.name, product.price_cents, quantity, lineTotal]);
+    }
+    await client.query('COMMIT');
+    return json(201, { order: { ...order.rows[0], total: order.rows[0].total_cents / 100 } }, origin);
+  } catch (cause) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw cause;
+  } finally { client.release(); }
+}
+
+async function listCustomerOrders(event) {
+  const origin = arguments[1], user = claims(event);
+  if (!user) return error(401, 'Sign in required');
+  const db = await readyDatabase();
+  const orders = await db.query(`SELECT id, order_number, status, subtotal_cents, delivery_cents, total_cents, created_at FROM customer_orders WHERE customer_cognito_sub = $1::uuid ORDER BY created_at DESC`, [user.sub]);
+  const ids = orders.rows.map((order) => order.id);
+  const items = ids.length ? await db.query(`SELECT order_id, product_sku, product_name, unit_price_cents, quantity, line_total_cents FROM customer_order_items WHERE order_id = ANY($1::bigint[]) ORDER BY id`, [ids]) : { rows: [] };
+  return json(200, { orders: orders.rows.map((order) => ({ ...order, subtotal: order.subtotal_cents / 100, delivery: order.delivery_cents / 100, total: order.total_cents / 100, items: items.rows.filter((item) => item.order_id === order.id).map((item) => ({ ...item, unitPrice: item.unit_price_cents / 100, lineTotal: item.line_total_cents / 100 })) })) }, origin);
+}
+
 async function deleteMedia(event) {
   const origin = arguments[1];
   const user = claims(event);
@@ -598,6 +664,7 @@ exports.handler = async (event) => {
     if (method === 'GET' && path === '/sellers') return listSellers(event, origin);
     if (method === 'GET' && /^\/sellers\/\d+$/.test(path)) return sellerDetails(Number(path.split('/').pop()), origin);
     if (method === 'GET' && path === '/availability') return availability(event, origin);
+    if (method === 'GET' && path === '/products') return listProducts(event, origin);
     if (method === 'POST' && path === '/account') return saveAccount(event, origin);
     if (method === 'GET' && path === '/account') return getAccount(event, origin);
     if (method === 'POST' && path === '/pro/application') return saveProfessionalApplication(event, origin);
@@ -616,6 +683,8 @@ exports.handler = async (event) => {
     if (method === 'GET' && path === '/bookings') return listCustomerBookings(event, origin);
     if (method === 'PATCH' && /^\/bookings\/\d+\/cancel$/.test(path)) return cancelCustomerBooking(event, origin);
     if (method === 'PATCH' && /^\/bookings\/\d+\/status$/.test(path)) return updateBookingStatus(event, origin);
+    if (method === 'POST' && path === '/orders') return createOrder(event, origin);
+    if (method === 'GET' && path === '/orders') return listCustomerOrders(event, origin);
     return error(404, 'Not found');
   } catch (cause) {
     console.error(cause);

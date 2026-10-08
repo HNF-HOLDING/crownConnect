@@ -313,6 +313,13 @@ Resources:
       RouteKey: GET /availability
       Target: !Sub integrations/${ApiIntegration}
 
+  PublicProductsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /products
+      Target: !Sub integrations/${ApiIntegration}
+
   CognitoAuthorizer:
     Type: AWS::ApiGatewayV2::Authorizer
     Properties:
@@ -465,6 +472,22 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: POST /bookings
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+      Target: !Sub integrations/${ApiIntegration}
+  CustomerOrdersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /orders
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+      Target: !Sub integrations/${ApiIntegration}
+  CustomerOrderCreateRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /orders
       AuthorizationType: JWT
       AuthorizerId: !Ref CognitoAuthorizer
       Target: !Sub integrations/${ApiIntegration}
