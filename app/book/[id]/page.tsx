@@ -38,7 +38,6 @@ type Account = {
   city: string;
   province: string;
 };
-const slots = ['09:00', '11:00', '13:00', '15:00'];
 function today() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Africa/Johannesburg',
@@ -54,7 +53,8 @@ export default function BookSeller() {
   const [details, setDetails] = useState<Details | null>(null),
     [account, setAccount] = useState<Account | null>(null);
   const [date, setDate] = useState(''),
-    [taken, setTaken] = useState<string[]>([]),
+    [availableSlots, setAvailableSlots] = useState<string[]>([]),
+    [availabilityReason, setAvailabilityReason] = useState(''),
     [loading, setLoading] = useState(true),
     [sending, setSending] = useState(false),
     [message, setMessage] = useState(''),
@@ -70,7 +70,7 @@ export default function BookSeller() {
         : '',
     [date],
   );
-  const available = !date || days.includes(weekday);
+  const available = !date || availableSlots.length > 0;
 
   useEffect(() => {
     void (async () => {
@@ -99,14 +99,15 @@ export default function BookSeller() {
   }, [id]);
   useEffect(() => {
     if (!date || !available) {
-      setTaken([]);
-      return;
+      if (!date) { setAvailableSlots([]); setAvailabilityReason(''); return; }
     }
-    void fetch(`${apiUrl}/availability?sellerId=${id}&date=${date}`)
+    const query = new URLSearchParams({ sellerId: id, date });
+    if (serviceId || details?.services[0]?.id) query.set('serviceId', serviceId || details?.services[0]?.id || '');
+    void fetch(`${apiUrl}/availability?${query}`)
       .then((response) => response.json())
-      .then((data) => setTaken(data.takenTimes ?? []))
-      .catch(() => setTaken([]));
-  }, [id, date, available]);
+      .then((data) => { setAvailableSlots(data.slots ?? []); setAvailabilityReason(data.reason ?? ''); })
+      .catch(() => { setAvailableSlots([]); setAvailabilityReason('Unable to load appointment times.'); });
+  }, [id, date, serviceId, details?.services]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -258,7 +259,7 @@ export default function BookSeller() {
                 {step === 1 && <section className="wizard-step"><p className="kicker">STEP 1</p><h3>Choose a hairstyle or service</h3><div className="choice-cards">{services.length ? services.map(service=><button type="button" className={(serviceId || services[0]?.id) === service.id ? 'selected' : ''} onClick={()=>setServiceId(service.id)} key={service.id}><span><strong>{service.name}</strong><small>{service.duration_minutes} minutes</small></span><b>R{service.price}</b></button>) : <button type="button" className="selected"><span><strong>{seller.featured_service}</strong><small>Stylist consultation included</small></span><b>R{seller.service_price}</b></button>}</div></section>}
                 {step === 2 && <section className="wizard-step"><p className="kicker">STEP 2</p><h3>Your stylist</h3><div className="chosen-stylist"><span className="profile-avatar">♛</span><div><strong>{seller.business_name}</strong><p>★ 4.9 · {seller.city} · Verified professional</p></div></div><p className="muted">This look is connected to its original CrownConnect stylist.</p></section>}
                 {step === 3 && <section className="wizard-step"><p className="kicker">STEP 3</p><h3>Choose your date</h3><input type="date" min={today()} value={date} onChange={event=>{setDate(event.target.value);setSelectedTime('')}} required/>{date&&!available&&<p className="availability-warning">This stylist is unavailable on {weekday}.</p>}<p className="muted">Available: {days.join(', ')}</p></section>}
-                {step === 4 && <section className="wizard-step"><p className="kicker">STEP 4</p><h3>Choose an available time</h3><div className="time-slots">{slots.map(time=><button type="button" disabled={taken.includes(time)} className={selectedTime===time?'selected':''} onClick={()=>setSelectedTime(time)} key={time}>{time}{taken.includes(time)&&<small>Requested</small>}</button>)}</div></section>}
+                {step === 4 && <section className="wizard-step"><p className="kicker">STEP 4</p><h3>Choose an available time</h3>{availableSlots.length?<div className="time-slots">{availableSlots.map(time=><button type="button" className={selectedTime===time?'selected':''} onClick={()=>setSelectedTime(time)} key={time}>{time}</button>)}</div>:<div className="empty">{availabilityReason || 'No appointment slots remain on this date. Choose another date.'}</div>}</section>}
                 {step === 5 && <section className="wizard-step"><p className="kicker">STEP 5</p><h3>Add the required hair</h3><label className={`product-choice ${includeProducts?'selected':''}`}><input type="checkbox" checked={includeProducts} onChange={event=>setIncludeProducts(event.target.checked)}/><span className="product-thumb cell-6"/><span><strong>3 × X-Pression Ultra Braid</strong><small>Recommended for this look</small></span><b>R269.97</b></label><button type="button" className="skip-link" onClick={()=>setIncludeProducts(false)}>I’ll bring my own hair</button></section>}
                 {step === 6 && <section className="wizard-step"><p className="kicker">STEP 6</p><h3>Choose how to pay</h3><div className="payment-choices"><button type="button" className={payment==='deposit'?'selected':''} onClick={()=>setPayment('deposit')}><strong>Pay a deposit</strong><span>Secure the appointment now</span><b>R{Math.max(100,Math.round(stylingPrice*.25))}</b></button><button type="button" className={payment==='full'?'selected':''} onClick={()=>setPayment('full')}><strong>Pay in full</strong><span>Styling {includeProducts?'and products':''}</span><b>R{(stylingPrice+productPrice).toFixed(2)}</b></button></div></section>}
                 {step === 7 && <section className="wizard-step"><p className="kicker">STEP 7</p><h3>Review and confirm</h3><div className="price-summary"><div><span>{selectedService?.name ?? seller.featured_service}</span><strong>R{stylingPrice.toFixed(2)}</strong></div>{includeProducts&&<div><span>Required hair products</span><strong>R{productPrice.toFixed(2)}</strong></div>}<div><span>Booking protection</span><strong>Included</strong></div><div className="total"><span>Due now ({payment})</span><strong>R{paymentAmount.toFixed(2)}</strong></div></div><label>Notes for your stylist<textarea name="notes" maxLength={500} placeholder="Anything your stylist should know?"/></label><button className="cc-button full" disabled={sending}>{sending?'Confirming…':'Confirm booking request'}</button></section>}

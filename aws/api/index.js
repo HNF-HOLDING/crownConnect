@@ -33,13 +33,22 @@ async function readyDatabase() {
     CREATE TABLE IF NOT EXISTS professional_applications (id BIGSERIAL PRIMARY KEY, cognito_sub UUID NOT NULL UNIQUE, email TEXT NOT NULL, legal_name TEXT NOT NULL, business_name TEXT NOT NULL, phone TEXT NOT NULL, city TEXT NOT NULL, province TEXT NOT NULL, service_area TEXT NOT NULL, categories TEXT NOT NULL, years_experience INTEGER NOT NULL CHECK (years_experience >= 0), bio TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'under_review', 'more_information', 'approved', 'rejected')), review_note TEXT NOT NULL DEFAULT '', submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), reviewed_at TIMESTAMPTZ, reviewed_by TEXT, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS admin_audit_events (id BIGSERIAL PRIMARY KEY, admin_sub UUID NOT NULL, admin_email TEXT NOT NULL, action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT NOT NULL, details JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS seller_profiles (id BIGSERIAL PRIMARY KEY, cognito_sub UUID NOT NULL UNIQUE REFERENCES account_profiles(cognito_sub) ON DELETE CASCADE, email TEXT NOT NULL, business_name TEXT NOT NULL, city TEXT NOT NULL, phone TEXT NOT NULL, specialty TEXT NOT NULL, featured_service TEXT NOT NULL, service_price INTEGER NOT NULL CHECK (service_price >= 0), bio TEXT NOT NULL, availability_days TEXT NOT NULL DEFAULT 'Mon,Tue,Wed,Thu,Fri,Sat', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS street_address TEXT NOT NULL DEFAULT '';
+    ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+    ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+    ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'Africa/Johannesburg';
+    ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS slot_interval_minutes INTEGER NOT NULL DEFAULT 30;
     CREATE TABLE IF NOT EXISTS seller_services (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, name TEXT NOT NULL, price INTEGER NOT NULL CHECK (price >= 0), duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0), description TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS seller_schedule (seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 0 AND 6), start_time TIME NOT NULL, end_time TIME NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE, PRIMARY KEY (seller_id, weekday), CHECK (end_time > start_time));
+    CREATE TABLE IF NOT EXISTS seller_blocked_dates (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, blocked_date DATE NOT NULL, reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (seller_id, blocked_date));
     CREATE TABLE IF NOT EXISTS seller_media (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, object_key TEXT NOT NULL UNIQUE, media_type TEXT NOT NULL CHECK (media_type IN ('image', 'video')), content_type TEXT NOT NULL, file_name TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS booking_requests (id BIGSERIAL PRIMARY KEY, seller_id BIGINT NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE, customer_cognito_sub UUID NOT NULL REFERENCES account_profiles(cognito_sub) ON DELETE RESTRICT, customer_email TEXT NOT NULL, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL, service_name TEXT NOT NULL, appointment_date DATE NOT NULL, appointment_time TIME NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'declined', 'cancelled')), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 120;
     CREATE INDEX IF NOT EXISTS idx_seller_profiles_city_specialty ON seller_profiles(city, specialty);
     CREATE INDEX IF NOT EXISTS idx_seller_services_seller_created ON seller_services(seller_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_seller_media_seller_created ON seller_media(seller_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_booking_seller_date ON booking_requests(seller_id, appointment_date);
+    CREATE INDEX IF NOT EXISTS idx_blocked_dates_seller_date ON seller_blocked_dates(seller_id, blocked_date);
     CREATE UNIQUE INDEX IF NOT EXISTS booking_active_slot ON booking_requests(seller_id, appointment_date, appointment_time) WHERE status IN ('pending', 'confirmed');
     CREATE INDEX IF NOT EXISTS idx_professional_applications_status ON professional_applications(status, submitted_at DESC);
     INSERT INTO professional_applications (cognito_sub, email, legal_name, business_name, phone, city, province, service_area, categories, years_experience, bio, status, reviewed_at, reviewed_by)
@@ -65,6 +74,10 @@ function today() {
   const value = (name) => parts.find((part) => part.type === name)?.value;
   return `${value('year')}-${value('month')}-${value('day')}`;
 }
+const weekdayNumber = (value) => new Date(`${value}T12:00:00Z`).getUTCDay();
+function timeToMinutes(value) { const [hours, minutes] = String(value).slice(0, 5).split(':').map(Number); return hours * 60 + minutes; }
+function minutesToTime(value) { return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`; }
+function validTime(value) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')); }
 async function body(event) { try { return JSON.parse(event.body || '{}'); } catch { return null; } }
 
 async function listSellers(event) {
@@ -74,16 +87,16 @@ async function listSellers(event) {
   if (query.specialty) { values.push(clean(query.specialty, 40)); where.push(`specialty = $${values.length}`); }
   if (query.maxPrice && Number.isFinite(Number(query.maxPrice))) { values.push(Number(query.maxPrice)); where.push(`service_price <= $${values.length}`); }
   if (query.q) { values.push(`%${clean(query.q, 100)}%`); where.push(`(business_name ILIKE $${values.length} OR featured_service ILIKE $${values.length} OR bio ILIKE $${values.length})`); }
-  const result = await (await readyDatabase()).query(`SELECT id, business_name, city, specialty, featured_service, service_price, bio, availability_days FROM seller_profiles ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY updated_at DESC LIMIT 48`, values);
+  const result = await (await readyDatabase()).query(`SELECT id, business_name, city, specialty, featured_service, service_price, bio, availability_days, latitude, longitude FROM seller_profiles ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY updated_at DESC LIMIT 48`, values);
   // Do not expose seller phone numbers on public list
-  const sellers = result.rows.map(r => ({ id: r.id, business_name: r.business_name, city: r.city, specialty: r.specialty, featured_service: r.featured_service, service_price: r.service_price, bio: r.bio, availability_days: r.availability_days }));
+  const sellers = result.rows.map(r => ({ id: r.id, business_name: r.business_name, city: r.city, specialty: r.specialty, featured_service: r.featured_service, service_price: r.service_price, bio: r.bio, availability_days: r.availability_days, latitude: r.latitude, longitude: r.longitude }));
   return json(200, { sellers });
 }
 
 async function sellerDetails(id) {
   const origin = arguments[1];
   const db = await readyDatabase();
-  const seller = await db.query('SELECT id, business_name, city, specialty, featured_service, service_price, bio, availability_days FROM seller_profiles WHERE id = $1', [id]);
+  const seller = await db.query('SELECT id, business_name, city, specialty, featured_service, service_price, bio, availability_days, street_address, latitude, longitude, slot_interval_minutes FROM seller_profiles WHERE id = $1', [id]);
   if (!seller.rowCount) return error(404, 'Stylist not found');
   const services = await db.query('SELECT id, name, price, duration_minutes, description FROM seller_services WHERE seller_id = $1 ORDER BY created_at DESC', [id]);
   const media = await db.query('SELECT id, media_type, content_type, file_name, object_key FROM seller_media WHERE seller_id = $1 ORDER BY created_at DESC', [id]);
@@ -95,19 +108,48 @@ async function sellerDetails(id) {
     url: await getSignedUrl(s3, new GetObjectCommand({ Bucket: process.env.MEDIA_BUCKET, Key: item.object_key }), { expiresIn: 3600 }),
   })));
   // Public detail endpoint: do not return seller phone. Booking will route through POST /bookings which notifies the seller.
-  const publicSeller = { id: seller.rows[0].id, business_name: seller.rows[0].business_name, city: seller.rows[0].city, specialty: seller.rows[0].specialty, featured_service: seller.rows[0].featured_service, service_price: seller.rows[0].service_price, bio: seller.rows[0].bio, availability_days: seller.rows[0].availability_days };
+  const publicSeller = { id: seller.rows[0].id, business_name: seller.rows[0].business_name, city: seller.rows[0].city, specialty: seller.rows[0].specialty, featured_service: seller.rows[0].featured_service, service_price: seller.rows[0].service_price, bio: seller.rows[0].bio, availability_days: seller.rows[0].availability_days, street_address: seller.rows[0].street_address, latitude: seller.rows[0].latitude, longitude: seller.rows[0].longitude, slot_interval_minutes: seller.rows[0].slot_interval_minutes };
   return json(200, { seller: publicSeller, services: services.rows, media: withUrls });
+}
+
+async function availableSlots(db, sellerId, date, serviceId) {
+  const seller = await db.query('SELECT availability_days, slot_interval_minutes FROM seller_profiles WHERE id = $1', [sellerId]);
+  if (!seller.rowCount) return null;
+  const blocked = await db.query('SELECT reason FROM seller_blocked_dates WHERE seller_id = $1 AND blocked_date = $2::date', [sellerId, date]);
+  if (blocked.rowCount) return { available: false, slots: [], reason: blocked.rows[0].reason || 'Stylist unavailable' };
+  const schedule = await db.query('SELECT start_time::text, end_time::text FROM seller_schedule WHERE seller_id = $1 AND weekday = $2 AND active = TRUE', [sellerId, weekdayNumber(date)]);
+  let start = 9 * 60, end = 17 * 60;
+  if (schedule.rowCount) {
+    start = timeToMinutes(schedule.rows[0].start_time);
+    end = timeToMinutes(schedule.rows[0].end_time);
+  } else if (!seller.rows[0].availability_days.split(',').includes(weekday(date))) {
+    return { available: false, slots: [], reason: 'Stylist does not work on this day' };
+  }
+  let duration = 120;
+  if (Number.isInteger(serviceId) && serviceId > 0) {
+    const service = await db.query('SELECT duration_minutes FROM seller_services WHERE id = $1 AND seller_id = $2', [serviceId, sellerId]);
+    if (service.rowCount) duration = service.rows[0].duration_minutes;
+  }
+  const bookings = await db.query("SELECT appointment_time::text, duration_minutes FROM booking_requests WHERE seller_id = $1 AND appointment_date = $2::date AND status IN ('pending', 'confirmed')", [sellerId, date]);
+  const interval = Math.max(15, Math.min(120, Number(seller.rows[0].slot_interval_minutes) || 30));
+  const slots = [];
+  for (let candidate = start; candidate + duration <= end; candidate += interval) {
+    const overlaps = bookings.rows.some((booking) => {
+      const bookedStart = timeToMinutes(booking.appointment_time), bookedEnd = bookedStart + Number(booking.duration_minutes || 120);
+      return candidate < bookedEnd && candidate + duration > bookedStart;
+    });
+    if (!overlaps) slots.push(minutesToTime(candidate));
+  }
+  return { available: true, slots, durationMinutes: duration, startTime: minutesToTime(start), endTime: minutesToTime(end) };
 }
 
 async function availability(event) {
   const origin = arguments[1];
-  const query = event.queryStringParameters || {}, sellerId = Number(query.sellerId), date = clean(query.date, 10);
-  if (!Number.isInteger(sellerId) || !dateIsValid(date)) return error(400, 'Invalid request');
-  const db = await readyDatabase();
-  const seller = await db.query('SELECT availability_days FROM seller_profiles WHERE id = $1', [sellerId]);
-  if (!seller.rowCount) return error(404, 'Stylist not found');
-  const taken = await db.query("SELECT appointment_time::text FROM booking_requests WHERE seller_id = $1 AND appointment_date = $2 AND status IN ('pending', 'confirmed')", [sellerId, date]);
-  return json(200, { available: seller.rows[0].availability_days.split(',').includes(weekday(date)), takenTimes: taken.rows.map((row) => row.appointment_time.slice(0, 5)) });
+  const query = event.queryStringParameters || {}, sellerId = Number(query.sellerId), serviceId = Number(query.serviceId), date = clean(query.date, 10);
+  if (!Number.isInteger(sellerId) || !dateIsValid(date) || date < today()) return error(400, 'Invalid request');
+  const result = await availableSlots(await readyDatabase(), sellerId, date, serviceId);
+  if (!result) return error(404, 'Stylist not found');
+  return json(200, result, origin);
 }
 
 async function saveAccount(event) {
@@ -207,16 +249,26 @@ async function createBooking(event) {
   const user = claims(event), data = await body(event);
   if (!user) return error(401, 'Sign in required');
   const sellerId = Number(data?.sellerId), serviceId = Number(data?.serviceId), customerName = clean(data?.customerName, 80), customerPhone = clean(data?.customerPhone, 30), appointmentDate = clean(data?.appointmentDate, 10), appointmentTime = clean(data?.appointmentTime, 5), notes = clean(data?.notes, 500);
-  if (!Number.isInteger(sellerId) || !customerName || !customerPhone || !dateIsValid(appointmentDate) || appointmentDate < today() || !['09:00', '11:00', '13:00', '15:00'].includes(appointmentTime)) return error(400, 'Choose an available future date and time.');
+  if (!Number.isInteger(sellerId) || !customerName || !customerPhone || !dateIsValid(appointmentDate) || appointmentDate < today() || !validTime(appointmentTime)) return error(400, 'Choose an available future date and time.');
   const db = await readyDatabase();
-  const seller = await db.query('SELECT id, cognito_sub, featured_service, availability_days FROM seller_profiles WHERE id = $1', [sellerId]);
-  if (!seller.rowCount || seller.rows[0].cognito_sub === user.sub || !seller.rows[0].availability_days.split(',').includes(weekday(appointmentDate))) return error(400, 'Choose an available future date and time.');
-  const service = Number.isInteger(serviceId) && serviceId > 0 ? await db.query('SELECT name FROM seller_services WHERE id = $1 AND seller_id = $2', [serviceId, sellerId]) : null;
+  const seller = await db.query('SELECT id, cognito_sub, featured_service FROM seller_profiles WHERE id = $1', [sellerId]);
+  if (!seller.rowCount || seller.rows[0].cognito_sub === user.sub) return error(400, 'Choose an available future date and time.');
+  const service = Number.isInteger(serviceId) && serviceId > 0 ? await db.query('SELECT name, duration_minutes FROM seller_services WHERE id = $1 AND seller_id = $2', [serviceId, sellerId]) : null;
+  const durationMinutes = Number(service?.rows[0]?.duration_minutes || 120);
+  const client = await db.connect();
   try {
-    await db.query(`INSERT INTO booking_requests (seller_id, customer_cognito_sub, customer_email, customer_name, customer_phone, service_name, appointment_date, appointment_time, notes) VALUES ($1, $2::uuid, $3, $4, $5, $6, $7::date, $8::time, $9)`, [sellerId, user.sub, user.email, customerName, customerPhone, service?.rows[0]?.name || seller.rows[0].featured_service, appointmentDate, appointmentTime, notes]);
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock($1::integer, hashtext($2))', [sellerId, appointmentDate]);
+    const slots = await availableSlots(client, sellerId, appointmentDate, serviceId);
+    if (!slots?.available || !slots.slots.includes(appointmentTime)) { await client.query('ROLLBACK'); return error(409, 'That appointment time is no longer available. Choose another slot.'); }
+    await client.query(`INSERT INTO booking_requests (seller_id, customer_cognito_sub, customer_email, customer_name, customer_phone, service_name, appointment_date, appointment_time, duration_minutes, notes) VALUES ($1, $2::uuid, $3, $4, $5, $6, $7::date, $8::time, $9, $10)`, [sellerId, user.sub, user.email, customerName, customerPhone, service?.rows[0]?.name || seller.rows[0].featured_service, appointmentDate, appointmentTime, durationMinutes, notes]);
+    await client.query('COMMIT');
   } catch (cause) {
+    await client.query('ROLLBACK').catch(() => {});
     if (cause?.code === '23505') return error(409, 'That time has just been requested. Please choose another slot.');
     throw cause;
+  } finally {
+    client.release();
   }
   return json(201, { ok: true });
 }
@@ -234,13 +286,23 @@ async function saveSeller(event) {
   const featuredService = clean(data?.featuredService, 100);
   const servicePrice = Number(data?.servicePrice);
   const bio = clean(data?.bio, 1000);
+  const streetAddress = clean(data?.streetAddress, 240);
+  const latitude = data?.latitude === '' || data?.latitude == null ? null : Number(data.latitude);
+  const longitude = data?.longitude === '' || data?.longitude == null ? null : Number(data.longitude);
+  const workStart = clean(data?.workStart, 5) || '09:00';
+  const workEnd = clean(data?.workEnd, 5) || '17:00';
+  const slotIntervalMinutes = Number(data?.slotIntervalMinutes || 30);
   const availabilityDays =
     clean(data?.availabilityDays, 100) || 'Mon,Tue,Wed,Thu,Fri,Sat';
 
   if (
     !businessName || !city || !phone || !specialty ||
     !featuredService || !bio ||
-    !Number.isInteger(servicePrice) || servicePrice < 0
+    !Number.isInteger(servicePrice) || servicePrice < 0 ||
+    (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) ||
+    (longitude !== null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)) ||
+    !validTime(workStart) || !validTime(workEnd) || timeToMinutes(workEnd) <= timeToMinutes(workStart) ||
+    ![15, 30, 45, 60].includes(slotIntervalMinutes)
   ) {
     return error(400, 'Complete all seller profile fields.');
   }
@@ -259,8 +321,9 @@ async function saveSeller(event) {
   const result = await db.query(
     `INSERT INTO seller_profiles
       (cognito_sub, email, business_name, city, phone, specialty,
-       featured_service, service_price, bio, availability_days)
-     VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       featured_service, service_price, bio, availability_days, street_address,
+       latitude, longitude, slot_interval_minutes)
+     VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      ON CONFLICT (cognito_sub)
      DO UPDATE SET
        email = EXCLUDED.email,
@@ -272,13 +335,25 @@ async function saveSeller(event) {
        service_price = EXCLUDED.service_price,
        bio = EXCLUDED.bio,
        availability_days = EXCLUDED.availability_days,
+       street_address = EXCLUDED.street_address,
+       latitude = EXCLUDED.latitude,
+       longitude = EXCLUDED.longitude,
+       slot_interval_minutes = EXCLUDED.slot_interval_minutes,
        updated_at = NOW()
-     RETURNING id, business_name, city, specialty, featured_service, service_price`,
+     RETURNING id, business_name, city, specialty, featured_service, service_price, street_address, latitude, longitude, slot_interval_minutes`,
     [
       user.sub, user.email, businessName, city, phone, specialty,
-      featuredService, servicePrice, bio, availabilityDays,
+      featuredService, servicePrice, bio, availabilityDays, streetAddress,
+      latitude, longitude, slotIntervalMinutes,
     ],
   );
+
+  const dayNumbers = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const selectedDayNumbers = availabilityDays.split(',').map((day) => dayNumbers[day]).filter((day) => Number.isInteger(day));
+  await db.query('DELETE FROM seller_schedule WHERE seller_id = $1', [result.rows[0].id]);
+  for (const day of selectedDayNumbers) {
+    await db.query('INSERT INTO seller_schedule (seller_id, weekday, start_time, end_time, active) VALUES ($1, $2, $3::time, $4::time, TRUE)', [result.rows[0].id, day, workStart, workEnd]);
+  }
 
   return json(200, { seller: result.rows[0] });
 }
@@ -380,13 +455,14 @@ async function ownSeller(event) {
   if (application.rows[0]?.status !== 'approved') return error(403, application.rowCount ? `Application status: ${application.rows[0].status}` : 'Submit a professional application first.');
   const seller = await db.query(
     `SELECT id, business_name, city, phone, specialty, featured_service,
-            service_price, bio, availability_days
+            service_price, bio, availability_days, street_address, latitude,
+            longitude, slot_interval_minutes
      FROM seller_profiles WHERE cognito_sub = $1::uuid`,
     [user.sub],
   );
   if (!seller.rowCount) return json(200, { seller: null, services: [], media: [], bookings: [] });
   const sellerId = seller.rows[0].id;
-  const [services, media, bookings] = await Promise.all([
+  const [services, media, bookings, schedule, blockedDates] = await Promise.all([
     db.query('SELECT id, name, price, duration_minutes, description FROM seller_services WHERE seller_id = $1 ORDER BY created_at DESC', [sellerId]),
     db.query('SELECT id, media_type, content_type, file_name, object_key FROM seller_media WHERE seller_id = $1 ORDER BY created_at DESC', [sellerId]),
     db.query(`SELECT id, customer_email, customer_name, customer_phone, service_name,
@@ -394,6 +470,8 @@ async function ownSeller(event) {
                      status, created_at
               FROM booking_requests WHERE seller_id = $1
               ORDER BY appointment_date ASC, appointment_time ASC, created_at DESC`, [sellerId]),
+    db.query('SELECT weekday, start_time::text, end_time::text, active FROM seller_schedule WHERE seller_id = $1 ORDER BY weekday', [sellerId]),
+    db.query('SELECT id, blocked_date, reason FROM seller_blocked_dates WHERE seller_id = $1 AND blocked_date >= CURRENT_DATE ORDER BY blocked_date', [sellerId]),
   ]);
   const mediaWithUrls = await Promise.all(media.rows.map(async (item) => ({
     id: item.id,
@@ -407,7 +485,30 @@ async function ownSeller(event) {
     services: services.rows,
     media: mediaWithUrls,
     bookings: bookings.rows.map((booking) => ({ ...booking, appointment_time: booking.appointment_time.slice(0, 5) })),
+    schedule: schedule.rows.map((item) => ({ ...item, start_time: item.start_time.slice(0, 5), end_time: item.end_time.slice(0, 5) })),
+    blockedDates: blockedDates.rows,
   });
+}
+
+async function createBlockedDate(event) {
+  const origin = arguments[1], user = claims(event), data = await body(event);
+  if (!user) return error(401, 'Sign in required');
+  const blockedDate = clean(data?.date, 10), reason = clean(data?.reason, 200);
+  if (!dateIsValid(blockedDate) || blockedDate < today()) return error(400, 'Choose a future date.');
+  const db = await readyDatabase();
+  const seller = await db.query('SELECT id FROM seller_profiles WHERE cognito_sub = $1::uuid', [user.sub]);
+  if (!seller.rowCount) return error(403, 'Seller profile required.');
+  const result = await db.query(`INSERT INTO seller_blocked_dates (seller_id, blocked_date, reason) VALUES ($1, $2::date, $3) ON CONFLICT (seller_id, blocked_date) DO UPDATE SET reason = EXCLUDED.reason RETURNING id, blocked_date, reason`, [seller.rows[0].id, blockedDate, reason]);
+  return json(201, { blockedDate: result.rows[0] }, origin);
+}
+
+async function deleteBlockedDate(event) {
+  const origin = arguments[1], user = claims(event), blockedId = Number(event.pathParameters?.id);
+  if (!user) return error(401, 'Sign in required');
+  if (!Number.isInteger(blockedId)) return error(400, 'Invalid blocked date.');
+  const result = await (await readyDatabase()).query(`DELETE FROM seller_blocked_dates b USING seller_profiles s WHERE b.id = $1 AND b.seller_id = s.id AND s.cognito_sub = $2::uuid RETURNING b.id`, [blockedId, user.sub]);
+  if (!result.rowCount) return error(404, 'Blocked date not found.');
+  return json(200, { ok: true }, origin);
 }
 
 async function listCustomerBookings(event) {
@@ -510,6 +611,8 @@ exports.handler = async (event) => {
     if (method === 'POST' && path === '/media/upload-url') return createMediaUpload(event, origin);
     if (method === 'DELETE' && /^\/media\/\d+$/.test(path)) return deleteMedia(event, origin);
     if (method === 'GET' && path === '/seller/bookings') return listSellerBookings(event, origin);
+    if (method === 'POST' && path === '/seller/blocked-dates') return createBlockedDate(event, origin);
+    if (method === 'DELETE' && /^\/seller\/blocked-dates\/\d+$/.test(path)) return deleteBlockedDate(event, origin);
     if (method === 'GET' && path === '/bookings') return listCustomerBookings(event, origin);
     if (method === 'PATCH' && /^\/bookings\/\d+\/cancel$/.test(path)) return cancelCustomerBooking(event, origin);
     if (method === 'PATCH' && /^\/bookings\/\d+\/status$/.test(path)) return updateBookingStatus(event, origin);

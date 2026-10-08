@@ -15,6 +15,10 @@ type Seller = {
   service_price: number;
   bio: string;
   availability_days: string;
+  street_address: string;
+  latitude: number | null;
+  longitude: number | null;
+  slot_interval_minutes: number;
 };
 type Service = {
   id: string;
@@ -46,6 +50,7 @@ type Studio = {
   services: Service[];
   media: Media[];
   bookings: Booking[];
+  blockedDates: { id:string; blocked_date:string; reason:string }[];
 };
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -290,6 +295,18 @@ export default function SellerStudio() {
               <label>WhatsApp or phone</label>
               <input name="phone" required defaultValue={profile?.phone} />
             </div>
+            <div className="field full">
+              <label>Business address</label>
+              <input name="streetAddress" placeholder="Street, suburb and city" defaultValue={profile?.street_address} />
+            </div>
+            <div className="field">
+              <label>Latitude</label>
+              <input name="latitude" type="number" step="any" placeholder="-25.7479" defaultValue={profile?.latitude ?? ''} />
+            </div>
+            <div className="field">
+              <label>Longitude</label>
+              <input name="longitude" type="number" step="any" placeholder="28.2293" defaultValue={profile?.longitude ?? ''} />
+            </div>
             <div className="field">
               <label>Specialty</label>
               <select
@@ -341,6 +358,9 @@ export default function SellerStudio() {
                 ))}
               </div>
             </fieldset>
+            <div className="field"><label>Working day starts<input name="workStart" type="time" defaultValue="09:00" required /></label></div>
+            <div className="field"><label>Working day ends<input name="workEnd" type="time" defaultValue="17:00" required /></label></div>
+            <div className="field full"><label>Appointment start interval<select name="slotIntervalMinutes" defaultValue={String(profile?.slot_interval_minutes ?? 30)}><option value="15">Every 15 minutes</option><option value="30">Every 30 minutes</option><option value="45">Every 45 minutes</option><option value="60">Every hour</option></select></label></div>
             <div className="form-actions">
               <span className="muted">Saved securely in AWS.</span>
               <button disabled={busy} className="button">
@@ -524,6 +544,10 @@ export default function SellerStudio() {
               ))}
             </div>
           )}
+        </section>
+        <section className="panel" id="calendar">
+          <p className="eyebrow">CALENDAR</p><h2>Blocked dates</h2><p>Close dates when you are unavailable. Customers will not be offered appointment times.</p>
+          {!profile ? <div className="empty">Publish your profile first.</div> : <><form className="form-grid" onSubmit={async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); await act('/seller/blocked-dates','POST','Date blocked.',{date:form.get('date'),reason:form.get('reason')}); event.currentTarget.reset(); }}><label className="field">Date<input name="date" type="date" required /></label><label className="field">Reason<input name="reason" placeholder="Holiday, training…" /></label><div className="form-actions"><span/><button className="button small" disabled={busy}>Block date</button></div></form><div className="blocked-date-list">{studio.blockedDates?.length ? studio.blockedDates.map(item=><div key={item.id}><span><strong>{String(item.blocked_date).slice(0,10)}</strong><small>{item.reason || 'Unavailable'}</small></span><button className="button ghost small" disabled={busy} onClick={()=>void act(`/seller/blocked-dates/${item.id}`,'DELETE','Blocked date removed.')}>Remove</button></div>) : <div className="empty">No upcoming blocked dates.</div>}</div></>}
         </section>
       </div>
     </main>

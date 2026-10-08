@@ -420,6 +420,22 @@ Resources:
       AuthorizationType: JWT
       AuthorizerId: !Ref CognitoAuthorizer
       Target: !Sub integrations/${ApiIntegration}
+  SellerBlockedDatesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /seller/blocked-dates
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+      Target: !Sub integrations/${ApiIntegration}
+  SellerBlockedDateDeleteRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: DELETE /seller/blocked-dates/{id}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+      Target: !Sub integrations/${ApiIntegration}
   BookingStatusRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:

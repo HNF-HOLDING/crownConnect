@@ -324,3 +324,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .location-controls button svg { width: 16px; }
 .location-controls small { color: #786870; padding: 0 0 10px; line-height: 1.4; }
 @media (max-width: 650px) { .location-controls { align-items: stretch; flex-direction: column; } .location-controls label { width: 100%; } .location-controls small { padding: 2px 0; } .location-controls button { justify-content: center; } }
+.blocked-date-list { display: grid; gap: 9px; margin-top: 18px; }
+.blocked-date-list > div:not(.empty) { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid #e7dce1; border-radius: 9px; }
+.blocked-date-list strong, .blocked-date-list small { display: block; }
+.blocked-date-list small { color: #786870; margin-top: 3px; }
