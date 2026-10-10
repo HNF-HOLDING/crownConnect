@@ -1,0 +1,1 @@
+export default function DiscoverLoading() { return <main className="cc-market"><div className="skeleton heading-skeleton"/><div className="skeleton-grid">{Array.from({length:8},(_,i)=><div key={i} className="skeleton card-skeleton"/>)}</div></main>; }
