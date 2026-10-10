@@ -71,10 +71,12 @@ export async function cognitoGroups() {
 }
 
 export async function awsApi(path: string, init: RequestInit = {}) {
-  const token = await cognitoToken();
   const headers = new Headers(init.headers);
   headers.set('content-type', 'application/json');
-  if (token) headers.set('authorization', `Bearer ${token}`);
+  if (!headers.has('authorization')) {
+    const token = await cognitoToken();
+    if (token) headers.set('authorization', `Bearer ${token}`);
+  }
   try {
     const res = await fetch(`${apiUrl}${path}`, { ...init, headers });
     return res;

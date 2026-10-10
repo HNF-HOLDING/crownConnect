@@ -25,7 +25,7 @@ export default function CheckoutPage() {
       const token = await Promise.race([cognitoToken(), new Promise<null>((_, reject) => window.setTimeout(() => reject(new Error('Authentication timed out')), 12000))]);
       if (!token) { window.location.href = '/sign-in?portal=customer&next=/checkout'; return; }
       const fields = new FormData(event.currentTarget);
-      const response = await awsApi('/orders', { method: 'POST', signal: AbortSignal.timeout(15000), body: JSON.stringify({
+      const response = await awsApi('/orders', { method: 'POST', signal: AbortSignal.timeout(15000), headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({
         fullName: fields.get('fullName'), phone: fields.get('phone'), streetAddress: fields.get('streetAddress'),
         city: fields.get('city'), province: fields.get('province'), lines,
       }) });
