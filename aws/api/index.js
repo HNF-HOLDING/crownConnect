@@ -53,6 +53,10 @@ async function readyDatabase() {
     CREATE INDEX IF NOT EXISTS idx_professional_applications_status ON professional_applications(status, submitted_at DESC);
     CREATE TABLE IF NOT EXISTS products (sku TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', price_cents INTEGER NOT NULL CHECK (price_cents >= 0), stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS customer_orders (id BIGSERIAL PRIMARY KEY, order_number TEXT NOT NULL UNIQUE, customer_cognito_sub UUID NOT NULL REFERENCES account_profiles(cognito_sub) ON DELETE RESTRICT, customer_email TEXT NOT NULL, full_name TEXT NOT NULL, phone TEXT NOT NULL, street_address TEXT NOT NULL, city TEXT NOT NULL, province TEXT NOT NULL, subtotal_cents INTEGER NOT NULL CHECK (subtotal_cents >= 0), delivery_cents INTEGER NOT NULL CHECK (delivery_cents >= 0), total_cents INTEGER NOT NULL CHECK (total_cents >= 0), status TEXT NOT NULL DEFAULT 'awaiting_payment' CHECK (status IN ('awaiting_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded')), payment_reference TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE customer_orders ADD COLUMN IF NOT EXISTS ozow_payment_id TEXT;
+    ALTER TABLE customer_orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_orders_payment_reference ON customer_orders(payment_reference) WHERE payment_reference IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_orders_ozow_payment_id ON customer_orders(ozow_payment_id) WHERE ozow_payment_id IS NOT NULL;
     CREATE TABLE IF NOT EXISTS customer_order_items (id BIGSERIAL PRIMARY KEY, order_id BIGINT NOT NULL REFERENCES customer_orders(id) ON DELETE CASCADE, product_sku TEXT NOT NULL REFERENCES products(sku) ON DELETE RESTRICT, product_name TEXT NOT NULL, unit_price_cents INTEGER NOT NULL CHECK (unit_price_cents >= 0), quantity INTEGER NOT NULL CHECK (quantity > 0), line_total_cents INTEGER NOT NULL CHECK (line_total_cents >= 0));
     CREATE INDEX IF NOT EXISTS idx_customer_orders_customer_created ON customer_orders(customer_cognito_sub, created_at DESC);
     INSERT INTO products (sku, name, category, description, price_cents, stock_quantity) VALUES
@@ -610,6 +614,76 @@ async function listCustomerOrders(event) {
   return json(200, { orders: orders.rows.map((order) => ({ ...order, subtotal: order.subtotal_cents / 100, delivery: order.delivery_cents / 100, total: order.total_cents / 100, items: items.rows.filter((item) => item.order_id === order.id).map((item) => ({ ...item, unitPrice: item.unit_price_cents / 100, lineTotal: item.line_total_cents / 100 })) })) }, origin);
 }
 
+async function prepareOrderPayment(event) {
+  const orderId = Number(event.orderId), customerSub = clean(event.customerSub, 80);
+  if (!Number.isInteger(orderId) || !customerSub) throw new Error('Invalid internal payment request.');
+  const db = await readyDatabase();
+  const order = await db.query(
+    `UPDATE customer_orders
+     SET payment_reference = COALESCE(payment_reference, order_number), updated_at = NOW()
+     WHERE id = $1 AND customer_cognito_sub = $2::uuid
+       AND status IN ('awaiting_payment', 'paid')
+     RETURNING id, order_number, customer_email, total_cents, status, payment_reference, ozow_payment_id`,
+    [orderId, customerSub],
+  );
+  if (!order.rowCount) return { ok: false, statusCode: 404, error: 'Order not found or cannot be paid.' };
+  const result = order.rows[0];
+  return { ok: true, orderId: result.id, orderNumber: result.order_number, email: result.customer_email, totalCents: result.total_cents, status: result.status, reference: result.payment_reference, paymentId: result.ozow_payment_id };
+}
+
+async function recordOrderPayment(event) {
+  const orderId = Number(event.orderId), paymentId = clean(event.paymentId, 160);
+  if (!Number.isInteger(orderId) || !paymentId) throw new Error('Invalid payment record request.');
+  const result = await (await readyDatabase()).query(
+    `UPDATE customer_orders SET ozow_payment_id = $1, updated_at = NOW()
+     WHERE id = $2 AND status = 'awaiting_payment'
+       AND (ozow_payment_id IS NULL OR ozow_payment_id = $1)
+     RETURNING id, order_number, status`,
+    [paymentId, orderId],
+  );
+  return result.rowCount ? { ok: true, order: result.rows[0] } : { ok: false, statusCode: 409, error: 'Order payment could not be recorded.' };
+}
+
+async function confirmOrderPayment(event) {
+  const reference = clean(event.reference, 120), paymentId = clean(event.paymentId, 160);
+  const amountCents = Number(event.amountCents);
+  if (!reference || !paymentId || !Number.isInteger(amountCents) || event.paymentStatus !== 'Successful') throw new Error('Invalid successful payment confirmation.');
+  const db = await readyDatabase(), client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const order = await client.query(
+      `SELECT id, order_number, status, total_cents, ozow_payment_id
+       FROM customer_orders WHERE payment_reference = $1 FOR UPDATE`,
+      [reference],
+    );
+    if (!order.rowCount) { await client.query('ROLLBACK'); return { ok: false, statusCode: 404, error: 'Payment order not found.' }; }
+    const current = order.rows[0];
+    if (current.total_cents !== amountCents) { await client.query('ROLLBACK'); return { ok: false, statusCode: 409, error: 'Payment amount does not match the order.' }; }
+    if (current.ozow_payment_id && current.ozow_payment_id !== paymentId) { await client.query('ROLLBACK'); return { ok: false, statusCode: 409, error: 'Payment identifier does not match the order.' }; }
+    if (current.status === 'paid') { await client.query('COMMIT'); return { ok: true, duplicate: true, orderNumber: current.order_number }; }
+    if (current.status !== 'awaiting_payment') { await client.query('ROLLBACK'); return { ok: false, statusCode: 409, error: 'Order is no longer awaiting payment.' }; }
+    const items = await client.query(
+      `SELECT i.product_sku, i.quantity, p.name, p.stock_quantity
+       FROM customer_order_items i JOIN products p ON p.sku = i.product_sku
+       WHERE i.order_id = $1 FOR UPDATE OF p`,
+      [current.id],
+    );
+    for (const item of items.rows) {
+      if (item.stock_quantity < item.quantity) { await client.query('ROLLBACK'); return { ok: false, statusCode: 409, error: `${item.name} is no longer available in the ordered quantity.` }; }
+    }
+    for (const item of items.rows) await client.query('UPDATE products SET stock_quantity = stock_quantity - $1, updated_at = NOW() WHERE sku = $2', [item.quantity, item.product_sku]);
+    await client.query(
+      `UPDATE customer_orders SET status = 'paid', ozow_payment_id = $1, paid_at = NOW(), updated_at = NOW() WHERE id = $2`,
+      [paymentId, current.id],
+    );
+    await client.query('COMMIT');
+    return { ok: true, duplicate: false, orderNumber: current.order_number };
+  } catch (cause) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw cause;
+  } finally { client.release(); }
+}
+
 async function deleteMedia(event) {
   const origin = arguments[1];
   const user = claims(event);
@@ -657,6 +731,9 @@ async function updateBookingStatus(event) {
 
 exports.handler = async (event) => {
   try {
+    if (event.internalAction === 'preparePayment') return prepareOrderPayment(event);
+    if (event.internalAction === 'recordPayment') return recordOrderPayment(event);
+    if (event.internalAction === 'confirmPayment') return confirmOrderPayment(event);
     const origin = event.headers?.origin || event.headers?.Origin;
     if (event.requestContext?.http?.method === 'OPTIONS') return json(204, {}, origin);
     const method = event.requestContext?.http?.method, path = event.rawPath;

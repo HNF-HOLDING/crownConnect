@@ -8,13 +8,14 @@ import { useCart } from '../cart';
 import { products } from '../marketplace-data';
 import { awsApi, cognitoToken } from '../aws-client';
 
-type CreatedOrder = { order_number: string; status: string; total: number };
+type CreatedOrder = { id: string; order_number: string; status: string; total: number };
 
 export default function CheckoutPage() {
   const { lines, total, clear } = useCart();
   const [order, setOrder] = useState<CreatedOrder | null>(null);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
+  const [paymentMessage, setPaymentMessage] = useState('');
   const delivery = lines.length && total < 1000 ? 75 : 0;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -57,6 +58,21 @@ export default function CheckoutPage() {
       }
       setOrder(payload.order);
       clear();
+      const paymentResponse = await awsApi('/payments/initialize', {
+        method: 'POST',
+        signal: AbortSignal.timeout(20000),
+        headers: { authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orderId: Number(payload.order.id) }),
+      });
+      const payment = await paymentResponse.json().catch(() => ({}));
+      if (paymentResponse.ok && payment.paymentUrl) {
+        window.location.assign(payment.paymentUrl);
+        return;
+      }
+      setPaymentMessage(
+        payment.error ||
+          'Your order is saved, but payment could not start. You can retry from your orders.',
+      );
     } catch (cause) {
       console.error(cause);
       setMessage(
@@ -80,10 +96,7 @@ export default function CheckoutPage() {
             status is <strong>awaiting payment</strong>; no money has been
             charged.
           </p>
-          <p>
-            We will enable payment only after the production payment provider
-            and webhook verification are configured.
-          </p>
+          <p>{paymentMessage || 'Preparing the secure Ozow payment page…'}</p>
           <Link className="cc-button" href="/customer/dashboard#orders">
             View my orders
           </Link>

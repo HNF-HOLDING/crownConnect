@@ -18,12 +18,20 @@ Parameters:
   ApiPackageKey:
     Type: String
     Default: deployments/crownconnect-api.zip
+  DeployPaymentPackage:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+  PaymentPackageKey:
+    Type: String
+    Default: deployments/crownconnect-payment.zip
   FrontendOrigin:
     Type: String
     Default: https://feature001.d9zjyay6u0gve.amplifyapp.com
 
 Conditions:
   UsePackagedApi: !Equals [!Ref DeployApiPackage, 'true']
+  UsePackagedPayment: !Equals [!Ref DeployPaymentPackage, 'true']
 
 Resources:
   Network:
@@ -112,6 +120,13 @@ Resources:
         GenerateStringKey: password
         PasswordLength: 32
         ExcludeCharacters: '"@/\\'
+
+  OzowSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub crownconnect/${Environment}/ozow
+      Description: CrownConnect Ozow One API credentials. Payments remain disabled until configured.
+      SecretString: '{"enabled":false,"environment":"staging","clientId":"","clientSecret":"","siteCode":"","webhookSecret":""}'
 
   MediaBucket:
     Type: AWS::S3::Bucket
@@ -264,6 +279,56 @@ Resources:
               body: JSON.stringify(event.rawPath === '/health' ? { status: 'ok', service: 'crownconnect-api', environment: process.env.APP_ENV } : { error: 'Not found' }),
             });
 
+  PaymentExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CrownConnectPaymentBoundary
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref OzowSecret
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt ApiFunction.Arn
+
+  PaymentFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub crownconnect-${Environment}-payment
+      Description: CrownConnect isolated Ozow payment adapter and signed webhook receiver
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role: !GetAtt PaymentExecutionRole.Arn
+      Timeout: 20
+      MemorySize: 256
+      Environment:
+        Variables:
+          APP_ENV: !Ref Environment
+          FRONTEND_ORIGIN: !Ref FrontendOrigin
+          ORDER_FUNCTION_NAME: !Ref ApiFunction
+          OZOW_SECRET_ARN: !Ref OzowSecret
+      Code: !If
+        - UsePackagedPayment
+        - S3Bucket: !Ref MediaBucket
+          S3Key: !Ref PaymentPackageKey
+        - ZipFile: |
+            exports.handler = async () => ({
+              statusCode: 503,
+              headers: { 'content-type': 'application/json; charset=utf-8' },
+              body: JSON.stringify({ error: 'Payment package is not deployed.' }),
+            });
+
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -283,6 +348,17 @@ Resources:
       IntegrationUri: !Sub
         - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
         - FunctionArn: !GetAtt ApiFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  PaymentApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationMethod: POST
+      IntegrationUri: !Sub
+        - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+        - FunctionArn: !GetAtt PaymentFunction.Arn
       PayloadFormatVersion: '2.0'
 
   HealthRoute:
@@ -492,6 +568,22 @@ Resources:
       AuthorizerId: !Ref CognitoAuthorizer
       Target: !Sub integrations/${ApiIntegration}
 
+  PaymentInitializeRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /payments/initialize
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+      Target: !Sub integrations/${PaymentApiIntegration}
+
+  PaymentWebhookRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /payments/webhook
+      Target: !Sub integrations/${PaymentApiIntegration}
+
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -510,6 +602,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
 
+  PaymentInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PaymentFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+
 Outputs:
   ApiUrl:
     Description: CrownConnect AWS API URL. /health is the initial smoke-test endpoint.
@@ -524,3 +624,7 @@ Outputs:
     Value: !GetAtt Database.Endpoint.Address
   DatabaseSecretArn:
     Value: !Ref DatabaseSecret
+  OzowSecretArn:
+    Value: !Ref OzowSecret
+  OzowWebhookUrl:
+    Value: !Sub '${HttpApi.ApiEndpoint}/payments/webhook'
