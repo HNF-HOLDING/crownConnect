@@ -8,7 +8,12 @@ import { useCart } from '../cart';
 import { products } from '../marketplace-data';
 import { awsApi, cognitoToken } from '../aws-client';
 
-type CreatedOrder = { id: string; order_number: string; status: string; total: number };
+type CreatedOrder = {
+  id: string;
+  order_number: string;
+  status: string;
+  total: number;
+};
 
 export default function CheckoutPage() {
   const { lines, total, clear } = useCart();
@@ -21,6 +26,9 @@ export default function CheckoutPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!lines.length || sending) return;
+    // Read the form synchronously. React clears `currentTarget` once the event
+    // handler yields, so waiting for Cognito first can otherwise lose the form.
+    const fields = new FormData(event.currentTarget);
     setSending(true);
     setMessage('');
     try {
@@ -37,7 +45,6 @@ export default function CheckoutPage() {
         window.location.href = '/sign-in?portal=customer&next=/checkout';
         return;
       }
-      const fields = new FormData(event.currentTarget);
       const response = await awsApi('/orders', {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
@@ -183,10 +190,11 @@ export default function CheckoutPage() {
               <div className="payment-placeholder">
                 <LockKeyhole />
                 <div>
-                  <strong>No payment will be taken yet</strong>
+                  <strong>Secure payment with Yoco</strong>
                   <p>
-                    This creates an awaiting-payment order. Card and Instant EFT
-                    will be added through a verified provider next.
+                    After your order is reserved, you’ll continue to Yoco’s
+                    secure checkout. CrownConnect never receives or stores your
+                    card details.
                   </p>
                 </div>
               </div>
@@ -208,8 +216,8 @@ export default function CheckoutPage() {
                 disabled={!lines.length || sending}
               >
                 {sending
-                  ? 'Reserving order…'
-                  : `Reserve order · R${(total + delivery).toFixed(2)}`}
+                  ? 'Opening secure payment…'
+                  : `Continue to Yoco · R${(total + delivery).toFixed(2)}`}
               </button>
             </section>
           </form>
