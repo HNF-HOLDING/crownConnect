@@ -121,12 +121,12 @@ Resources:
         PasswordLength: 32
         ExcludeCharacters: '"@/\\'
 
-  OzowSecret:
+  YocoSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub crownconnect/${Environment}/ozow
-      Description: CrownConnect Ozow One API credentials. Payments remain disabled until configured.
-      SecretString: '{"enabled":false,"environment":"staging","clientId":"","clientSecret":"","siteCode":"","webhookSecret":""}'
+      Name: !Sub crownconnect/${Environment}/yoco
+      Description: CrownConnect Yoco Checkout API credentials. Payments remain disabled until configured.
+      SecretString: '{"enabled":false,"secretKey":"","webhookSecret":""}'
 
   MediaBucket:
     Type: AWS::S3::Bucket
@@ -297,7 +297,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
-                Resource: !Ref OzowSecret
+                Resource: !Ref YocoSecret
               - Effect: Allow
                 Action: lambda:InvokeFunction
                 Resource: !GetAtt ApiFunction.Arn
@@ -306,7 +306,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub crownconnect-${Environment}-payment
-      Description: CrownConnect isolated Ozow payment adapter and signed webhook receiver
+      Description: CrownConnect isolated Yoco payment adapter and signed webhook receiver
       Runtime: nodejs22.x
       Handler: index.handler
       Role: !GetAtt PaymentExecutionRole.Arn
@@ -317,7 +317,7 @@ Resources:
           APP_ENV: !Ref Environment
           FRONTEND_ORIGIN: !Ref FrontendOrigin
           ORDER_FUNCTION_NAME: !Ref ApiFunction
-          OZOW_SECRET_ARN: !Ref OzowSecret
+          YOCO_SECRET_ARN: !Ref YocoSecret
       Code: !If
         - UsePackagedPayment
         - S3Bucket: !Ref MediaBucket
@@ -624,7 +624,7 @@ Outputs:
     Value: !GetAtt Database.Endpoint.Address
   DatabaseSecretArn:
     Value: !Ref DatabaseSecret
-  OzowSecretArn:
-    Value: !Ref OzowSecret
-  OzowWebhookUrl:
+  YocoSecretArn:
+    Value: !Ref YocoSecret
+  YocoWebhookUrl:
     Value: !Sub '${HttpApi.ApiEndpoint}/payments/webhook'

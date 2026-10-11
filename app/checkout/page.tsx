@@ -96,7 +96,7 @@ export default function CheckoutPage() {
             status is <strong>awaiting payment</strong>; no money has been
             charged.
           </p>
-          <p>{paymentMessage || 'Preparing the secure Ozow payment page…'}</p>
+          <p>{paymentMessage || 'Preparing the secure Yoco payment page…'}</p>
           <Link className="cc-button" href="/customer/dashboard#orders">
             View my orders
           </Link>

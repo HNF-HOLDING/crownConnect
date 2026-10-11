@@ -1,5 +1,5 @@
 {
-  "name": "crownconnect-ozow-payment",
+  "name": "crownconnect-yoco-payment",
   "private": true,
   "type": "commonjs",
   "scripts": {
@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.900.0",
-    "@aws-sdk/client-secrets-manager": "^3.900.0",
-    "svix": "^1.76.1"
+    "@aws-sdk/client-secrets-manager": "^3.900.0"
   }
 }

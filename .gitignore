@@ -36,6 +36,7 @@ next-env.d.ts
 /dist/
 /aws/dist/
 /aws/api/node_modules/
+/aws/payment/node_modules/
 /.wrangler/
 /outputs/
 /work/
