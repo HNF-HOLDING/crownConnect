@@ -2,12 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import {
-  awsApi,
-  cognitoToken,
-  fetchAuthSession,
-  signOut,
-} from '../aws-client';
+import { awsApi, cognitoToken, fetchAuthSession, signOut } from '../aws-client';
 import { PortalHeader } from '../portal-header';
 
 export default function AdminPortal() {
@@ -145,6 +140,68 @@ export default function AdminPortal() {
                       <div>
                         <dt>Experience</dt>
                         <dd>{application.years_experience} years</dd>
+                      </div>
+                      <div>
+                        <dt>Verification</dt>
+                        <dd>
+                          {application.identity_type?.replaceAll('_', ' ')} ·
+                          ending {application.identity_number_last4}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Business registration</dt>
+                        <dd>
+                          {application.business_registration_number ||
+                            'Sole trader / not supplied'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Fulfilment</dt>
+                        <dd>
+                          {application.fulfilment_model?.replaceAll('_', ' ')}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Collection address</dt>
+                        <dd>
+                          {application.collection_street_address},{' '}
+                          {application.collection_suburb},{' '}
+                          {application.collection_city},{' '}
+                          {application.collection_province}{' '}
+                          {application.collection_postal_code}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Returns</dt>
+                        <dd>
+                          {application.returns_same_as_collection
+                            ? 'Same as collection address'
+                            : `${application.return_street_address}, ${application.return_suburb}, ${application.return_city}, ${application.return_province} ${application.return_postal_code}`}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Payout account</dt>
+                        <dd>
+                          {application.bank_name} ·{' '}
+                          {application.bank_account_type} · ending{' '}
+                          {application.bank_account_last4}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Stock and handling</dt>
+                        <dd>
+                          {application.default_stock_quantity} units ·{' '}
+                          {application.handling_days} business day(s)
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default packed parcel</dt>
+                        <dd>
+                          {application.default_product_weight_kg} kg ·{' '}
+                          {application.default_package_length_cm} ×{' '}
+                          {application.default_package_width_cm} ×{' '}
+                          {application.default_package_height_cm} cm
+                        </dd>
                       </div>
                     </dl>
                     <p>{application.bio}</p>
