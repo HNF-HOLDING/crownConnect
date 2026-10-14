@@ -74,9 +74,33 @@ export function PortalHeader({
           </Link>
         )}
       </div>
-      {portal === 'customer' && <nav className="mobile-customer-nav" aria-label="Mobile customer navigation">
-        <Link href="/customer"><Home/><span>Home</span></Link><Link href="/discover"><Compass/><span>Discover</span></Link><Link href="/shop"><ShoppingBag/><span>Shop</span></Link><Link href="/stylists"><Scissors/><span>Stylists</span></Link><Link href="/account"><UserRound/><span>Profile</span></Link>
-      </nav>}
+      {portal === 'customer' && (
+        <nav
+          className="mobile-customer-nav"
+          aria-label="Mobile customer navigation"
+        >
+          <Link href="/customer">
+            <Home />
+            <span>Home</span>
+          </Link>
+          <Link href="/discover">
+            <Compass />
+            <span>Discover</span>
+          </Link>
+          <Link href="/shop">
+            <ShoppingBag />
+            <span>Shop</span>
+          </Link>
+          <Link href="/stylists">
+            <Scissors />
+            <span>Stylists</span>
+          </Link>
+          <Link href="/account">
+            <UserRound />
+            <span>Profile</span>
+          </Link>
+        </nav>
+      )}
     </header>
   );
 }
