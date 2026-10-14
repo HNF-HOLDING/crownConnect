@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { CheckCircle2, CreditCard, LockKeyhole, MapPin } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { SyntheticEvent, useState } from 'react';
 import { PortalHeader } from '../portal-header';
 import { useCart } from '../cart';
 import { products } from '../marketplace-data';
@@ -23,7 +23,7 @@ export default function CheckoutPage() {
   const [paymentMessage, setPaymentMessage] = useState('');
   const delivery = lines.length && total < 1000 ? 75 : 0;
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!lines.length || sending) return;
     // Read the form synchronously. React clears `currentTarget` once the event
@@ -48,7 +48,7 @@ export default function CheckoutPage() {
       const response = await awsApi('/orders', {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token.toString()}` },
         body: JSON.stringify({
           fullName: fields.get('fullName'),
           phone: fields.get('phone'),
@@ -68,7 +68,7 @@ export default function CheckoutPage() {
       const paymentResponse = await awsApi('/payments/initialize', {
         method: 'POST',
         signal: AbortSignal.timeout(20000),
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token.toString()}` },
         body: JSON.stringify({ orderId: Number(payload.order.id) }),
       });
       const payment = await paymentResponse.json().catch(() => ({}));

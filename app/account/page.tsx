@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { SyntheticEvent, useEffect, useState } from 'react';
 import { awsApi, cognitoToken, signOut } from '../aws-client';
 import { PortalHeader } from '../portal-header';
 
@@ -49,7 +49,7 @@ export default function AccountPage() {
       setLoading(false);
     })();
   }, []);
-  async function save(event: FormEvent<HTMLFormElement>) {
+  async function save(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setMessage('');
@@ -111,7 +111,7 @@ export default function AccountPage() {
             services. Your email comes from your verified Cognito identity.
           </p>
           {account && (
-            <div className="seller-onboarding-callout" role="status">
+            <output className="seller-onboarding-callout">
               {isSeller ? (
                 <>
                   <strong>You’re ready for Seller Studio.</strong>
@@ -129,7 +129,7 @@ export default function AccountPage() {
                   </span>
                 </>
               )}
-            </div>
+            </output>
           )}
           <form className="registration-form" onSubmit={save}>
             <input
@@ -199,6 +199,7 @@ export default function AccountPage() {
               <input
                 type="checkbox"
                 name="marketingConsent"
+                aria-label="Receive optional CrownConnect product updates"
                 defaultChecked={account?.marketing_consent}
               />
               <span>
@@ -211,7 +212,12 @@ export default function AccountPage() {
             </label>
             {!account?.terms_accepted && (
               <label className="registration-choice">
-                <input type="checkbox" name="termsAccepted" required />
+                <input
+                  type="checkbox"
+                  name="termsAccepted"
+                  aria-label="Accept the CrownConnect terms and privacy notice"
+                  required
+                />
                 <span>
                   <strong>I agree to the terms</strong>
                   <small>
@@ -229,11 +235,7 @@ export default function AccountPage() {
                   : 'Create my account'}
             </button>
           </form>
-          {message && (
-            <p className="notice" role="status">
-              {message}
-            </p>
-          )}
+          {message && <output className="notice">{message}</output>}
           {account && (
             <div className="customer-actions">
               <Link

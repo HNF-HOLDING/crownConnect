@@ -5,11 +5,53 @@ import { useEffect, useState } from 'react';
 import { awsApi, cognitoToken, fetchAuthSession, signOut } from '../aws-client';
 import { PortalHeader } from '../portal-header';
 
+type ProfessionalApplication = {
+  id: string;
+  email: string;
+  legal_name: string;
+  business_name: string;
+  phone: string;
+  city: string;
+  province: string;
+  service_area: string;
+  categories: string;
+  years_experience: number;
+  bio: string;
+  status: string;
+  identity_type?: string;
+  identity_number_last4?: string;
+  business_registration_number?: string;
+  fulfilment_model?: string;
+  collection_street_address?: string;
+  collection_suburb?: string;
+  collection_city?: string;
+  collection_province?: string;
+  collection_postal_code?: string;
+  returns_same_as_collection?: boolean;
+  return_street_address?: string;
+  return_suburb?: string;
+  return_city?: string;
+  return_province?: string;
+  return_postal_code?: string;
+  bank_name?: string;
+  bank_account_type?: string;
+  bank_account_last4?: string;
+  default_stock_quantity?: number;
+  handling_days?: number;
+  default_product_weight_kg?: number;
+  default_package_length_cm?: number;
+  default_package_width_cm?: number;
+  default_package_height_cm?: number;
+  review_note?: string;
+};
+
 export default function AdminPortal() {
   const [state, setState] = useState<'checking' | 'denied' | 'allowed'>(
     'checking',
   );
-  const [applications, setApplications] = useState<any[]>([]),
+  const [applications, setApplications] = useState<ProfessionalApplication[]>(
+      [],
+    ),
     [notes, setNotes] = useState<Record<string, string>>({}),
     [error, setError] = useState(''),
     [busy, setBusy] = useState('');

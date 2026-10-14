@@ -51,7 +51,7 @@ export function AwsMarketplace() {
           <p>Discover professionals using the CrownConnect AWS marketplace.</p>
         </section>
 
-        <div className="marketplace-empty-state" role="status">
+        <output className="marketplace-empty-state">
           <h2>No stylists available yet</h2>
           <p>
             The marketplace is still being populated. Please check again soon
@@ -60,7 +60,7 @@ export function AwsMarketplace() {
           <Link className="button" href="/products">
             Browse hair products
           </Link>
-        </div>
+        </output>
       </main>
     );
   }

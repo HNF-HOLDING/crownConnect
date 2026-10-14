@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { SyntheticEvent, useEffect, useState } from 'react';
 import {
   confirmResetPassword,
   confirmSignUp,
@@ -42,7 +42,7 @@ export default function SignInPage() {
     )
       setPortal(requestedPortal);
   }, []);
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
     setBusy(true);
@@ -247,11 +247,7 @@ export default function SignInPage() {
                         : 'Sign in'}
             </button>
           </form>
-          {message && (
-            <p className="notice" role="status">
-              {message}
-            </p>
-          )}
+          {message && <output className="notice">{message}</output>}
           {!verification && (
             <div className="auth-switches">
               {portal !== 'admin' && (

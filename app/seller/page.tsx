@@ -1,9 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
+import { SyntheticEvent, useCallback, useEffect, useState } from 'react';
 import { awsApi, cognitoToken, signOut } from '../aws-client';
-import { CalendarDays, CircleDollarSign, Eye, Images, LayoutDashboard, MessageCircle, Scissors, Settings, Star } from 'lucide-react';
+import {
+  CalendarDays,
+  CircleDollarSign,
+  Eye,
+  Images,
+  LayoutDashboard,
+  MessageCircle,
+  Scissors,
+  Settings,
+  Star,
+} from 'lucide-react';
 
 type Seller = {
   id: string;
@@ -50,7 +61,7 @@ type Studio = {
   services: Service[];
   media: Media[];
   bookings: Booking[];
-  blockedDates: { id:string; blocked_date:string; reason:string }[];
+  blockedDates: { id: string; blocked_date: string; reason: string }[];
 };
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -95,7 +106,7 @@ export default function SellerStudio() {
     void load();
   }, [load]);
 
-  async function submitProfile(event: FormEvent<HTMLFormElement>) {
+  async function submitProfile(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
@@ -108,7 +119,10 @@ export default function SellerStudio() {
           body: JSON.stringify({
             ...payload,
             servicePrice: Number(payload.servicePrice),
-            availabilityDays: form.getAll('availabilityDays').join(','),
+            availabilityDays: form
+              .getAll('availabilityDays')
+              .map(String)
+              .join(','),
           }),
         }),
       );
@@ -123,7 +137,7 @@ export default function SellerStudio() {
     }
   }
 
-  async function addService(event: FormEvent<HTMLFormElement>) {
+  async function addService(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
@@ -152,7 +166,7 @@ export default function SellerStudio() {
     }
   }
 
-  async function upload(event: FormEvent<HTMLFormElement>) {
+  async function upload(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
@@ -254,24 +268,83 @@ export default function SellerStudio() {
           </button>
         </div>
       </div>
-      <nav className="studio-tabs" aria-label="Seller Studio sections"><a className="active" href="#dashboard"><LayoutDashboard/> Dashboard</a><a href="#bookings"><CalendarDays/> Bookings</a><a href="#portfolio"><Images/> Portfolio</a><a href="#services"><Scissors/> Services</a><a href="#messages"><MessageCircle/> Messages</a><a href="#earnings"><CircleDollarSign/> Earnings</a><a href="#profile"><Settings/> Profile</a></nav>
+      <nav className="studio-tabs" aria-label="Seller Studio sections">
+        <a className="active" href="#dashboard">
+          <LayoutDashboard /> Dashboard
+        </a>
+        <a href="#bookings">
+          <CalendarDays /> Bookings
+        </a>
+        <a href="#portfolio">
+          <Images /> Portfolio
+        </a>
+        <a href="#services">
+          <Scissors /> Services
+        </a>
+        <a href="#messages">
+          <MessageCircle /> Messages
+        </a>
+        <a href="#earnings">
+          <CircleDollarSign /> Earnings
+        </a>
+        <a href="#profile">
+          <Settings /> Profile
+        </a>
+      </nav>
       <p className="eyebrow">SELLER STUDIO · AWS</p>
       <h1>
         {profile
           ? `Welcome back, ${profile.business_name}`
           : 'Bring your business online.'}
       </h1>
-      {notice && (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      )}
+      {notice && <output className="notice">{notice}</output>}
       {error && (
         <p className="notice" role="alert">
           {error}
         </p>
       )}
-      <section className="studio-metrics" id="dashboard"><article><CalendarDays/><span><strong>{studio.bookings.filter((booking) => booking.status === 'confirmed').length}</strong>Confirmed bookings</span></article><article><CircleDollarSign/><span><strong>R{(studio.bookings.filter((booking) => booking.status === 'confirmed').length * (profile?.service_price ?? 0)).toLocaleString('en-ZA')}</strong>Estimated earnings</span></article><article><Eye/><span><strong>{Math.max(18, studio.media.length * 47)}</strong>Profile views</span></article><article><Star/><span><strong>4.9</strong>Average rating</span></article></section>
+      <section className="studio-metrics" id="dashboard">
+        <article>
+          <CalendarDays />
+          <span>
+            <strong>
+              {
+                studio.bookings.filter(
+                  (booking) => booking.status === 'confirmed',
+                ).length
+              }
+            </strong>
+            Confirmed bookings
+          </span>
+        </article>
+        <article>
+          <CircleDollarSign />
+          <span>
+            <strong>
+              R
+              {(
+                studio.bookings.filter(
+                  (booking) => booking.status === 'confirmed',
+                ).length * (profile?.service_price ?? 0)
+              ).toLocaleString('en-ZA')}
+            </strong>
+            Estimated earnings
+          </span>
+        </article>
+        <article>
+          <Eye />
+          <span>
+            <strong>{Math.max(18, studio.media.length * 47)}</strong>Profile
+            views
+          </span>
+        </article>
+        <article>
+          <Star />
+          <span>
+            <strong>4.9</strong>Average rating
+          </span>
+        </article>
+      </section>
       <div className="panel-grid">
         <section className="panel" id="profile">
           <p className="eyebrow">YOUR PROFILE</p>
@@ -280,36 +353,67 @@ export default function SellerStudio() {
           </h2>
           <form className="form-grid" onSubmit={submitProfile}>
             <div className="field full">
-              <label>Business name</label>
+              <label htmlFor="seller-business-name">Business name</label>
               <input
+                id="seller-business-name"
                 name="businessName"
                 required
                 defaultValue={profile?.business_name}
               />
             </div>
             <div className="field">
-              <label>Town or city</label>
-              <input name="city" required defaultValue={profile?.city} />
+              <label htmlFor="seller-city">Town or city</label>
+              <input
+                id="seller-city"
+                name="city"
+                required
+                defaultValue={profile?.city}
+              />
             </div>
             <div className="field">
-              <label>WhatsApp or phone</label>
-              <input name="phone" required defaultValue={profile?.phone} />
+              <label htmlFor="seller-phone">WhatsApp or phone</label>
+              <input
+                id="seller-phone"
+                name="phone"
+                required
+                defaultValue={profile?.phone}
+              />
             </div>
             <div className="field full">
-              <label>Business address</label>
-              <input name="streetAddress" placeholder="Street, suburb and city" defaultValue={profile?.street_address} />
+              <label htmlFor="seller-address">Business address</label>
+              <input
+                id="seller-address"
+                name="streetAddress"
+                placeholder="Street, suburb and city"
+                defaultValue={profile?.street_address}
+              />
             </div>
             <div className="field">
-              <label>Latitude</label>
-              <input name="latitude" type="number" step="any" placeholder="-25.7479" defaultValue={profile?.latitude ?? ''} />
+              <label htmlFor="seller-latitude">Latitude</label>
+              <input
+                id="seller-latitude"
+                name="latitude"
+                type="number"
+                step="any"
+                placeholder="-25.7479"
+                defaultValue={profile?.latitude ?? ''}
+              />
             </div>
             <div className="field">
-              <label>Longitude</label>
-              <input name="longitude" type="number" step="any" placeholder="28.2293" defaultValue={profile?.longitude ?? ''} />
+              <label htmlFor="seller-longitude">Longitude</label>
+              <input
+                id="seller-longitude"
+                name="longitude"
+                type="number"
+                step="any"
+                placeholder="28.2293"
+                defaultValue={profile?.longitude ?? ''}
+              />
             </div>
             <div className="field">
-              <label>Specialty</label>
+              <label htmlFor="seller-specialty">Specialty</label>
               <select
+                id="seller-specialty"
                 name="specialty"
                 defaultValue={profile?.specialty ?? 'Braids'}
               >
@@ -321,8 +425,9 @@ export default function SellerStudio() {
               </select>
             </div>
             <div className="field">
-              <label>Starting price (ZAR)</label>
+              <label htmlFor="seller-start-price">Starting price (ZAR)</label>
               <input
+                id="seller-start-price"
                 name="servicePrice"
                 type="number"
                 min="0"
@@ -331,16 +436,22 @@ export default function SellerStudio() {
               />
             </div>
             <div className="field full">
-              <label>Featured service</label>
+              <label htmlFor="seller-featured-service">Featured service</label>
               <input
+                id="seller-featured-service"
                 name="featuredService"
                 required
                 defaultValue={profile?.featured_service}
               />
             </div>
             <div className="field full">
-              <label>About your business</label>
-              <textarea name="bio" required defaultValue={profile?.bio} />
+              <label htmlFor="seller-bio">About your business</label>
+              <textarea
+                id="seller-bio"
+                name="bio"
+                required
+                defaultValue={profile?.bio}
+              />
             </div>
             <fieldset className="field full availability-field">
               <legend>Days you accept bookings</legend>
@@ -358,9 +469,42 @@ export default function SellerStudio() {
                 ))}
               </div>
             </fieldset>
-            <div className="field"><label>Working day starts<input name="workStart" type="time" defaultValue="09:00" required /></label></div>
-            <div className="field"><label>Working day ends<input name="workEnd" type="time" defaultValue="17:00" required /></label></div>
-            <div className="field full"><label>Appointment start interval<select name="slotIntervalMinutes" defaultValue={String(profile?.slot_interval_minutes ?? 30)}><option value="15">Every 15 minutes</option><option value="30">Every 30 minutes</option><option value="45">Every 45 minutes</option><option value="60">Every hour</option></select></label></div>
+            <div className="field">
+              <label>
+                Working day starts
+                <input
+                  name="workStart"
+                  type="time"
+                  defaultValue="09:00"
+                  required
+                />
+              </label>
+            </div>
+            <div className="field">
+              <label>
+                Working day ends
+                <input
+                  name="workEnd"
+                  type="time"
+                  defaultValue="17:00"
+                  required
+                />
+              </label>
+            </div>
+            <div className="field full">
+              <label>
+                Appointment start interval
+                <select
+                  name="slotIntervalMinutes"
+                  defaultValue={String(profile?.slot_interval_minutes ?? 30)}
+                >
+                  <option value="15">Every 15 minutes</option>
+                  <option value="30">Every 30 minutes</option>
+                  <option value="45">Every 45 minutes</option>
+                  <option value="60">Every hour</option>
+                </select>
+              </label>
+            </div>
             <div className="form-actions">
               <span className="muted">Saved securely in AWS.</span>
               <button disabled={busy} className="button">
@@ -378,16 +522,23 @@ export default function SellerStudio() {
             <>
               <form className="form-grid" onSubmit={addService}>
                 <div className="field full">
-                  <label>Service name</label>
-                  <input name="name" required />
+                  <label htmlFor="service-name">Service name</label>
+                  <input id="service-name" name="name" required />
                 </div>
                 <div className="field">
-                  <label>Price (ZAR)</label>
-                  <input name="price" type="number" min="0" required />
-                </div>
-                <div className="field">
-                  <label>Duration (minutes)</label>
+                  <label htmlFor="service-price">Price (ZAR)</label>
                   <input
+                    id="service-price"
+                    name="price"
+                    type="number"
+                    min="0"
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="service-duration">Duration (minutes)</label>
+                  <input
+                    id="service-duration"
                     name="durationMinutes"
                     type="number"
                     min="15"
@@ -397,8 +548,8 @@ export default function SellerStudio() {
                   />
                 </div>
                 <div className="field full">
-                  <label>Description</label>
-                  <input name="description" />
+                  <label htmlFor="service-description">Description</label>
+                  <input id="service-description" name="description" />
                 </div>
                 <div className="form-actions">
                   <span />
@@ -429,21 +580,69 @@ export default function SellerStudio() {
           ) : (
             <>
               <form className="upload-form" onSubmit={upload}>
-                <label>Photo or video</label>
+                <label htmlFor="portfolio-media">Photo or video</label>
                 <input
+                  id="portfolio-media"
                   name="media"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
                   required
                 />
                 <div className="post-work-fields">
-                  <label>Hairstyle name<input name="hairstyleName" placeholder="e.g. Boho knotless braids" required /></label>
-                  <label>Price (ZAR)<input name="postPrice" type="number" min="0" placeholder="850" /></label>
-                  <label>Duration<select name="postDuration"><option>1 hour</option><option>2 hours</option><option>3 hours</option><option>4+ hours</option></select></label>
-                  <label>Category<select name="postCategory"><option>Braids</option><option>Wigs</option><option>Natural hair</option><option>Locs</option><option>Cornrows</option></select></label>
-                  <label className="full">Description<textarea name="postDescription" placeholder="Describe the look and technique" /></label>
-                  <label className="full">Hair/products required<input name="postProducts" placeholder="3 braid packs, curling hair, edge control" /></label>
-                  <label className="bookable-toggle"><input type="checkbox" defaultChecked /> Make this look bookable</label>
+                  <label>
+                    Hairstyle name
+                    <input
+                      name="hairstyleName"
+                      placeholder="e.g. Boho knotless braids"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Price (ZAR)
+                    <input
+                      name="postPrice"
+                      type="number"
+                      min="0"
+                      placeholder="850"
+                    />
+                  </label>
+                  <label>
+                    Duration
+                    <select name="postDuration">
+                      <option>1 hour</option>
+                      <option>2 hours</option>
+                      <option>3 hours</option>
+                      <option>4+ hours</option>
+                    </select>
+                  </label>
+                  <label>
+                    Category
+                    <select name="postCategory">
+                      <option>Braids</option>
+                      <option>Wigs</option>
+                      <option>Natural hair</option>
+                      <option>Locs</option>
+                      <option>Cornrows</option>
+                    </select>
+                  </label>
+                  <label className="full">
+                    Description
+                    <textarea
+                      name="postDescription"
+                      placeholder="Describe the look and technique"
+                    />
+                  </label>
+                  <label className="full">
+                    Hair/products required
+                    <input
+                      name="postProducts"
+                      placeholder="3 braid packs, curling hair, edge control"
+                    />
+                  </label>
+                  <label className="bookable-toggle">
+                    <input type="checkbox" defaultChecked /> Make this look
+                    bookable
+                  </label>
                 </div>
                 <button disabled={busy} className="button small">
                   Post work to CrownConnect
@@ -453,9 +652,15 @@ export default function SellerStudio() {
                 {studio.media.map((item) => (
                   <figure className="portfolio-item" key={item.id}>
                     {item.media_type === 'image' ? (
-                      <img src={item.url} alt={item.file_name} />
+                      <Image
+                        src={item.url}
+                        alt={item.file_name}
+                        width={800}
+                        height={800}
+                        unoptimized
+                      />
                     ) : (
-                      <video controls src={item.url} />
+                      <video controls muted src={item.url} />
                     )}
                     <button
                       disabled={busy}
@@ -546,8 +751,74 @@ export default function SellerStudio() {
           )}
         </section>
         <section className="panel" id="calendar">
-          <p className="eyebrow">CALENDAR</p><h2>Blocked dates</h2><p>Close dates when you are unavailable. Customers will not be offered appointment times.</p>
-          {!profile ? <div className="empty">Publish your profile first.</div> : <><form className="form-grid" onSubmit={async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); await act('/seller/blocked-dates','POST','Date blocked.',{date:form.get('date'),reason:form.get('reason')}); event.currentTarget.reset(); }}><label className="field">Date<input name="date" type="date" required /></label><label className="field">Reason<input name="reason" placeholder="Holiday, training…" /></label><div className="form-actions"><span/><button className="button small" disabled={busy}>Block date</button></div></form><div className="blocked-date-list">{studio.blockedDates?.length ? studio.blockedDates.map(item=><div key={item.id}><span><strong>{String(item.blocked_date).slice(0,10)}</strong><small>{item.reason || 'Unavailable'}</small></span><button className="button ghost small" disabled={busy} onClick={()=>void act(`/seller/blocked-dates/${item.id}`,'DELETE','Blocked date removed.')}>Remove</button></div>) : <div className="empty">No upcoming blocked dates.</div>}</div></>}
+          <p className="eyebrow">CALENDAR</p>
+          <h2>Blocked dates</h2>
+          <p>
+            Close dates when you are unavailable. Customers will not be offered
+            appointment times.
+          </p>
+          {!profile ? (
+            <div className="empty">Publish your profile first.</div>
+          ) : (
+            <>
+              <form
+                className="form-grid"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  const form = new FormData(event.currentTarget);
+                  await act('/seller/blocked-dates', 'POST', 'Date blocked.', {
+                    date: form.get('date'),
+                    reason: form.get('reason'),
+                  });
+                  event.currentTarget.reset();
+                }}
+              >
+                <label className="field">
+                  Date
+                  <input name="date" type="date" required />
+                </label>
+                <label className="field">
+                  Reason
+                  <input name="reason" placeholder="Holiday, training…" />
+                </label>
+                <div className="form-actions">
+                  <span />
+                  <button className="button small" disabled={busy}>
+                    Block date
+                  </button>
+                </div>
+              </form>
+              <div className="blocked-date-list">
+                {studio.blockedDates?.length ? (
+                  studio.blockedDates.map((item) => (
+                    <div key={item.id}>
+                      <span>
+                        <strong>
+                          {String(item.blocked_date).slice(0, 10)}
+                        </strong>
+                        <small>{item.reason || 'Unavailable'}</small>
+                      </span>
+                      <button
+                        className="button ghost small"
+                        disabled={busy}
+                        onClick={() =>
+                          void act(
+                            `/seller/blocked-dates/${item.id}`,
+                            'DELETE',
+                            'Blocked date removed.',
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty">No upcoming blocked dates.</div>
+                )}
+              </div>
+            </>
+          )}
         </section>
       </div>
     </main>

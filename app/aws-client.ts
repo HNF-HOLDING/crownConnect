@@ -10,51 +10,53 @@ const userPoolId =
 const userPoolClientId =
   process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID ??
   '15gofegp1qm23upgot25ck16bv';
-const awsRegion = process.env.NEXT_PUBLIC_AWS_REGION ?? 'af-south-1';
-
-// Configure Amplify Auth with the expected shape so helpers like fetchAuthSession work
-const authConfig: any = {
-  Cognito: {
-    userPoolId,
-    userPoolClientId: userPoolClientId,
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId,
+      userPoolClientId,
+      loginWith: { username: true, email: false, phone: false },
+    },
   },
-  region: awsRegion,
-};
-// Provide minimal `loginWith` defaults to avoid undefined access in the library
-authConfig.Cognito.loginWith = authConfig.Cognito.loginWith ?? {
-  username: true,
-  email: false,
-  phone: false,
-};
-Amplify.configure({ Auth: authConfig });
+});
+
+type AuthModule = typeof import('@aws-amplify/auth');
 
 // Dynamically load auth helpers after Amplify is configured to avoid
 // the auth package executing configuration-time code on static import.
-export async function confirmResetPassword(input: any) {
+export async function confirmResetPassword(
+  input: Parameters<AuthModule['confirmResetPassword']>[0],
+) {
   const mod = await import('@aws-amplify/auth');
   return mod.confirmResetPassword(input);
 }
-export async function confirmSignUp(input: any) {
+export async function confirmSignUp(
+  input: Parameters<AuthModule['confirmSignUp']>[0],
+) {
   const mod = await import('@aws-amplify/auth');
   return mod.confirmSignUp(input);
 }
-export async function fetchAuthSession(options?: any) {
+export async function fetchAuthSession(
+  options?: Parameters<AuthModule['fetchAuthSession']>[0],
+) {
   const mod = await import('@aws-amplify/auth');
   return mod.fetchAuthSession(options);
 }
-export async function resetPassword(input: any) {
+export async function resetPassword(
+  input: Parameters<AuthModule['resetPassword']>[0],
+) {
   const mod = await import('@aws-amplify/auth');
   return mod.resetPassword(input);
 }
-export async function signIn(input: any) {
+export async function signIn(input: Parameters<AuthModule['signIn']>[0]) {
   const mod = await import('@aws-amplify/auth');
   return mod.signIn(input);
 }
-export async function signOut(input?: any) {
+export async function signOut(input?: Parameters<AuthModule['signOut']>[0]) {
   const mod = await import('@aws-amplify/auth');
   return mod.signOut(input);
 }
-export async function signUp(input: any) {
+export async function signUp(input: Parameters<AuthModule['signUp']>[0]) {
   const mod = await import('@aws-amplify/auth');
   return mod.signUp(input);
 }
@@ -75,7 +77,7 @@ export async function awsApi(path: string, init: RequestInit = {}) {
   headers.set('content-type', 'application/json');
   if (!headers.has('authorization')) {
     const token = await cognitoToken();
-    if (token) headers.set('authorization', `Bearer ${token}`);
+    if (token) headers.set('authorization', `Bearer ${token.toString()}`);
   }
   try {
     const res = await fetch(`${apiUrl}${path}`, { ...init, headers });

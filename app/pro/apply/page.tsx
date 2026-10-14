@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { SyntheticEvent, useEffect, useState } from 'react';
 import { awsApi, cognitoToken } from '../../aws-client';
 import { PortalHeader } from '../../portal-header';
 
@@ -82,7 +82,7 @@ export default function ProApply() {
       setLoading(false);
     })();
   }, []);
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setMessage('');
@@ -342,6 +342,7 @@ export default function ProApply() {
                   <input
                     type="checkbox"
                     name="verificationConsent"
+                    aria-label="Consent to identity and business verification"
                     required
                     defaultChecked={application?.verification_consent}
                   />
@@ -449,6 +450,7 @@ export default function ProApply() {
                   <input
                     type="checkbox"
                     name="returnsSameAsCollection"
+                    aria-label="Use the collection address for returns"
                     checked={returnsSame}
                     onChange={(event) => setReturnsSame(event.target.checked)}
                   />
@@ -673,7 +675,12 @@ export default function ProApply() {
                   </label>
                 </div>
                 <label className="registration-choice">
-                  <input type="checkbox" name="providerAgreement" required />
+                  <input
+                    type="checkbox"
+                    name="providerAgreement"
+                    aria-label="Accept the CrownConnect provider agreement"
+                    required
+                  />
                   <span>
                     <strong>I accept the provider agreement</strong>
                     <small>
@@ -691,11 +698,7 @@ export default function ProApply() {
                 </button>
               </form>
             )}
-            {message && (
-              <p className="notice" role="status">
-                {message}
-              </p>
-            )}
+            {message && <output className="notice">{message}</output>}
           </>
         )}
       </main>
